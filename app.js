@@ -209,6 +209,25 @@ async function refreshJobs(restore=false) {
   }
   $('fetch-financial').disabled=state.busy;
 }
+function jobProgress(job) {
+  // Overall % from the counts the worker reports: collection 0-50%, financial 50-100% for analysis jobs.
+  const ratio=(a,b)=>b>0?Math.min(1,Math.max(0,a/b)):null;
+  const collected=job.selected===undefined?null:job.selected===0?1:ratio((job.processed||0)+(job.failures?.length||0),job.selected);
+  const financial=job.steps?ratio(job.step||0,job.steps):null;
+  let percent,stage=0;
+  if(job.kind==='analysis'){
+    stage=job.stage==='financial'?2:job.selected!==undefined?1:0;
+    percent=stage===2?50+50*(financial??0):stage===1?5+45*(collected??0):2;
+  }else if(job.kind==='scan')percent=collected===null?2:100*collected;
+  else percent=financial===null?2:100*financial;
+  if(job.state==='completed'){percent=100;stage=3;}
+  return {percent:Math.round(percent),stage};
+}
+function sinceText(value) {
+  const seconds=Math.round((Date.now()-Date.parse(value))/1000);
+  if(!Number.isFinite(seconds))return '';
+  return seconds<5?'방금 갱신':seconds<60?`${seconds}초 전 갱신`:`${Math.round(seconds/60)}분 전 갱신`;
+}
 function renderJobs() {
   const root=$('jobs');root.replaceChildren();
   if(!state.jobs.length){root.append(el('p','muted','아직 실행한 작업이 없습니다.'));return;}
@@ -220,7 +239,20 @@ function renderJobs() {
     if(active)head.append(button('중지',()=>api(`/api/jobs/${job.id}/stop`,{}).then(()=>refreshJobs()).catch(e=>notify(e.message))));
     else if(job.reportId)head.append(button('재무표 열기',()=>loadReport(job.reportId).then(()=>page('financial')).catch(e=>notify(e.message))));
     row.append(head);
-    if(active){const progress=el('div','job-progress');progress.append(el('i'));row.append(progress);}
+    if(active){
+      const {percent,stage}=jobProgress(job);
+      const meter=el('div','job-meter'),progress=el('div','job-progress'),bar=el('i');
+      bar.style.width=percent+'%';progress.append(bar);
+      progress.setAttribute('role','progressbar');progress.setAttribute('aria-valuemin','0');progress.setAttribute('aria-valuemax','100');progress.setAttribute('aria-valuenow',String(percent));
+      meter.append(progress,el('strong','job-percent',percent+'%'));row.append(meter);
+      if(job.kind==='analysis'){
+        const steps=el('ol','job-steps');
+        const counts=[ '', job.selected!==undefined?` ${(job.processed||0)+(job.failures?.length||0)}/${job.selected}`:'', job.steps?` ${job.step||0}/${job.steps}`:''];
+        ['회사 확인','공시 원문 수집','재무·제품 분석'].forEach((label,i)=>steps.append(el('li',i<stage?'done':i===stage?'current':'',(i<stage?'✓ ':`${i+1}. `)+label+(i===stage?counts[i]:''))));
+        row.append(steps);
+      }
+      const since=sinceText(job.updated);if(since)row.append(el('small','job-since',since));
+    }
     if(job.selected!==undefined)row.append(el('small','',`선택 ${job.selected}건 · 분석 ${job.processed||0}건 · 실패 ${job.failures?.length||0}건`));
     if(job.truncated)row.append(el('p','scope-note','보고서 상한에 도달했습니다. 전체 회사를 조사한 결과가 아닙니다. 기간을 나누어 추가 수집하세요.'));
     if(job.failures?.length){const d=el('details');d.append(el('summary','',`실패한 보고서 ${job.failures.length}건 보기`));job.failures.forEach(f=>d.append(el('p','',`${f.company} · ${f.receipt}\n${f.error}`)));row.append(d);}
