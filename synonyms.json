@@ -1,0 +1,15 @@
+[
+  ["불화수소", "불산", "HF", "hydrogen fluoride", "hydrofluoric acid"],
+  ["CMP 슬러리", "CMP Slurry", "연마 슬러리"],
+  ["CMP 패드", "CMP Pad"],
+  ["포토레지스트", "포토 레지스트", "photoresist", "photo resist"],
+  ["식각액", "에천트", "etchant"],
+  ["전구체", "프리커서", "precursor"],
+  ["삼불화질소", "NF3", "nitrogen trifluoride"],
+  ["육불화텅스텐", "WF6", "tungsten hexafluoride"],
+  ["실리콘 웨이퍼", "silicon wafer"],
+  ["펠리클", "pellicle"],
+  ["언더필", "underfill"],
+  ["본딩 와이어", "본딩와이어", "bonding wire"],
+  ["솔더볼", "솔더 볼", "solder ball"]
+]

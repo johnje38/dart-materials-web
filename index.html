@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#122b39"><title>소재 탐색 · DART 리서치</title>
+  <link rel="stylesheet" href="./style.css"><script src="./config.js" defer></script><script src="./cloud.bundle.js" defer></script><script src="./app.js" defer></script>
+</head>
+<body>
+  <section id="login-screen" class="login-screen hidden">
+    <form id="login-form" class="login-card">
+      <div class="brand-mark">M</div><p class="eyebrow">DART MATERIALS RESEARCH</p>
+      <h1>공시에서 찾는<br>기업의 재료.</h1><p class="muted">소재·기업 검색과 재무 분석을 바로 시작합니다.</p>
+      <button class="primary" type="submit">다시 접속하기</button><p id="login-error" role="alert"></p><small>로그인 없이 자동으로 접속합니다.</small><input id="password" type="hidden">
+    </form>
+  </section>
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <a class="brand" href="./" aria-label="소재 탐색 홈"><span class="brand-mark">M</span><span>소재 탐색<small>DART RESEARCH</small></span></a>
+      <p class="nav-label">WORKSPACE</p>
+      <nav aria-label="주 메뉴">
+        <button class="nav active" data-page="search"><span>⌕</span> 소재 검색</button>
+        <button class="nav" data-page="companies"><span>▦</span> 회사 찾기</button>
+        <button class="nav" data-page="financial"><span>▤</span> 재무 분석</button>
+        <button class="nav" data-page="library"><span>☆</span> 분석 보관함</button>
+        
+      </nav>
+      <div class="sidebar-bottom"><span class="status-dot"></span> Supabase 실시간 리서치<p>공시 원문과 계산 근거를<br>함께 확인하세요.</p><button id="logout" class="quiet">로그아웃 ↗</button></div>
+    </aside>
+    <main>
+      <header class="topbar"><span>내 리서치 <span class="slash">/</span> <b id="page-label">소재 검색</b></span><span class="pill">OPEN DART</span></header>
+      <div id="notice" class="notice hidden" role="alert"></div>
+      <div class="workspace">
+        <section id="page-search" class="page">
+          <div class="page-heading"><div><p class="eyebrow">MATERIALS EXPLORER</p><h1>소재에서 기업으로.</h1><p class="muted">키워드로 회사를 찾고 선택하면, 공시 수집부터 재무 분석까지 자동으로 이어집니다.</p></div></div>
+          <ol class="workflow"><li>1. 키워드 검색</li><li>2. 회사 선택</li><li>3. 공시 원문 수집</li><li>4. 재무 분석</li></ol>
+          <div class="stats"><article><span>제품 목록 검색 대상</span><strong id="stat-companies">0</strong><small>KRX 공식 상장법인 목록</small></article><article><span>분석한 보고서</span><strong id="stat-reports">0</strong><small>서버에 저장된 전체 원문</small></article><article><span>소재 분류</span><strong id="stat-categories">6</strong><small>공시 근거 기반 키워드</small></article></div>
+          <form id="search-form" class="search-box"><label class="sr-only" for="query">소재·제품 검색어</label><span class="search-icon">⌕</span><input id="query" placeholder="소재·제품 검색 — 예: 반도체, 불화수소, 포토레지스트" maxlength="100"><button type="submit" class="primary">관련 회사 찾기</button></form>
+          <div id="categories" class="chips" aria-label="소재 분류"></div>
+          <div class="results-heading"><h2>관련 회사 <span id="result-count">0</span></h2><span id="search-scope" class="muted"></span></div>
+          <p class="scope-note">KRX 업종·주요제품 목록과 저장된 공시에서 후보를 찾습니다. 회사를 선택한 뒤 해당 회사의 원문을 수집하고 분석합니다. 비상장사는 저장된 원문 또는 <button class="text-button" data-go="companies">회사명 찾기</button>를 이용하세요.</p>
+          <p id="catalog-status" class="scope-note" role="status"></p>
+          <div class="list-controls"><label for="search-sort">정렬</label><select id="search-sort"><option value="relevance">관련도</option><option value="name">회사명</option><option value="evidence">공시 근거 수</option></select><div id="search-pagination" class="pagination"></div></div>
+          <div id="search-results" class="company-grid"></div>
+          <p class="footnote">키워드 일치는 제조·판매를 확정하지 않습니다. 고객사·경쟁사 언급이 포함될 수 있으니 원문을 확인하세요.</p>
+        </section>
+        <section id="page-companies" class="page hidden">
+          <div class="page-heading"><div><p class="eyebrow">COMPANY DIRECTORY</p><h1>회사부터 찾아보기.</h1><p class="muted">DART 공식 회사명·종목코드로 찾아 원문과 재무자료를 조회합니다.</p></div></div>
+          <form id="company-form" class="search-box"><label class="sr-only" for="company-query">회사명 또는 종목코드</label><span class="search-icon">⌕</span><input id="company-query" placeholder="회사명 또는 종목코드 — 예: 솔브레인, 357780" required maxlength="100"><button class="primary" type="submit">회사 찾기</button></form>
+          <p id="company-status" class="muted">처음 조회할 때 공식 회사 목록을 내려받습니다.</p><div id="company-results" class="company-grid"></div>
+        </section>
+        <section id="page-financial" class="page hidden">
+          <div class="page-heading"><div><p class="eyebrow">FINANCIAL WORKSPACE</p><h1 id="financial-title">5개년 재무 분석.</h1><p class="muted">재무상태·손익, 공시된 제품 매출과 내수·수출을 한곳에서 봅니다.</p></div></div>
+          <form id="financial-form" class="panel form-row">
+            <div class="grow"><label for="selected-company">선택한 회사</label><input id="selected-company" placeholder="회사 찾기에서 회사를 선택하세요" readonly></div>
+            <div><label for="basis">재무 기준</label><select id="basis"><option value="CFS">연결</option><option value="OFS">별도</option></select></div>
+            <div><label for="last-year">마지막 사업연도</label><input id="last-year" type="number" min="2019" required></div>
+            <button id="fetch-financial" class="primary" type="submit">공시 수집·재무 분석</button>
+          </form>
+          <p class="scope-note">상장사 구조화 재무정보를 우선 사용합니다. 비상장사 등 자료가 제공되지 않으면 수집한 감사보고서 원문에서 재무표를 확인하세요.</p>
+          <div id="financial-content" class="panel empty"><h2>회사를 선택해 주세요.</h2><p>회사 찾기에서 선택하면 연간 5개년과 다음 연도의 최신 누적 분기를 조회할 수 있습니다.</p><button class="outline" data-go="companies">회사 찾기로 이동 →</button></div>
+        </section>
+        <section id="page-collect" class="page hidden">
+          <div class="page-heading"><div><p class="eyebrow">DOCUMENT LIBRARY</p><h1>검색의 범위를 넓히세요.</h1><p class="muted">보고서를 수집하면 소재 검색에 계속 재사용됩니다. 브라우저를 닫아도 GitHub Actions에서 분석을 계속합니다.</p></div></div>
+          <form id="collect-form" class="panel collect-form">
+            <h2>공시 원문 수집</h2>
+            <label for="scan-scope">대상 회사</label><select id="scan-scope"><option value="all">전체 회사에서 최신 보고서 수집</option value="selected">선택한 회사만 수집</option></select>
+            <p id="scan-company" class="muted">회사를 지정하려면 회사 찾기에서 선택하세요.</p>
+            <div class="form-row"><div><label for="start-date">접수 시작일</label><input type="date" id="start-date" required></div><div><label for="end-date">접수 종료일</label><input type="date" id="end-date" required></div><div><label for="scan-limit">최대 보고서 수</label><input type="number" id="scan-limit" min="1" max="1000" value="300" required></div></div>
+            <div class="checks"><label><input type="checkbox" id="listed" checked>상장사 사업보고서</label><label><input type="checkbox" id="unlisted">비상장사 감사·연결감사보고서</label></div>
+            <div class="info-box">접수일 기준입니다. 보고서 상한에 도달하면 최근 공시 일부만 조사한 결과입니다. 상한·기간을 바꿔 추가 수집할 수 있으며, 같은 원문은 중복 분석하지 않습니다.</div>
+            <button class="primary" type="submit">원문 수집 시작 ↓</button>
+          </form>
+        </section>
+        <section id="page-library" class="page hidden">
+          <div class="page-heading"><div><p class="eyebrow">RESEARCH LIBRARY</p><h1>분석을 쌓아두는 곳.</h1><p class="muted">이전 결과를 다시 열고 관심회사·메모를 관리하거나 같은 기준의 기업을 비교하세요.</p></div></div>
+          <form id="library-form" class="search-box"><input id="library-query" aria-label="보관함 회사 검색" placeholder="회사명 또는 고유번호"><button class="primary">검색</button></form>
+          <div class="list-controls"><label class="inline-check"><input id="favorites-only" type="checkbox">관심회사만</label><button id="compare-selected" class="outline">선택 기업 비교 (0/4)</button><button id="clear-comparison" class="text-button">선택 해제</button><div id="library-pagination" class="pagination"></div></div>
+          <p class="scope-note">비교는 같은 사업연도·연결/별도 기준의 연간 결과 2~4개를 선택하세요. 미입수 항목은 빈 값으로 표시합니다.</p>
+          <div id="library-results" class="company-grid"></div>
+        </section>
+        <section id="jobs-panel" class="panel jobs-panel"><div class="results-heading"><h2>수집·분석 상태</h2><button id="refresh-jobs" class="text-button">새로고침 ↻</button></div><div id="jobs"><p class="muted">아직 실행한 작업이 없습니다.</p></div></section>
+      </div>
+    </main>
+  </div>
+  <dialog id="detail-dialog"><div class="dialog-top"><h2 id="detail-title">원문 근거</h2><button id="close-dialog" class="outline" aria-label="닫기">닫기 ×</button></div><div id="detail-body"></div></dialog>
+</body>
+</html>

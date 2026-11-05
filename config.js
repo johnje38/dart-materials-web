@@ -1,0 +1,1 @@
+window.DART_CLOUD_CONFIG={"url":"https://xbenvduduzibkmbzniys.supabase.co","key":"sb_publishable_btZcwlTESYr9vhIjs_OTGQ_BFHOAKx-"};
