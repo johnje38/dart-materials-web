@@ -1,5 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
+// Matches the cloud database limit; the local server still runs one job at a time and says so.
+const MAX_ACTIVE_JOBS=3;
 const state = {config:null, category:'', company:null, search:null, report:null, reportId:null, jobs:[], busy:false, searchRevision:0,financialRevision:0,jobsRevision:0,companyRevision:0,analysisJob:null};
 const labels = {search:'소재 검색', companies:'회사 찾기', financial:'재무 분석', collect:'원문 수집',library:'분석 보관함'};
 state.searchPage=1;state.libraryPage=1;state.libraryRevision=0;state.comparison=new Map();
@@ -140,7 +142,7 @@ function selectCompany(company) {
   $('financial-content').className='panel empty';page('financial');
 }
 async function analyzeCompany(company) {
-  if(state.busy){notify('진행 중인 분석을 완료하거나 중지한 뒤 회사를 선택하세요.');return;}
+  if(state.busy){notify(`분석은 동시에 ${MAX_ACTIVE_JOBS}개까지 실행할 수 있습니다. 하나가 끝나거나 중지한 뒤 다시 시도하세요.`);return;}
   selectCompany(company);
   $('financial-content').replaceChildren(el('h2','',`${company.name} · 공시 원문 수집 중`),el('p','','사업보고서 또는 감사보고서를 모은 뒤 5개년 재무·제품 매출 분석을 자동으로 시작합니다. 아래 진행 상태를 확인하세요.'));
   try{await startJob('analyze',{code:company.code,basis:$('basis').value,year:Number($('last-year').value)});}
@@ -181,7 +183,7 @@ async function showCompanyRaw(code,name) {
   }
 }
 async function startJob(kind,options) {
-  notify('');const job=await api('/api/'+kind,options);state.busy=true;
+  notify('');const job=await api('/api/'+kind,options);
   if(kind==='analyze')state.analysisJob={id:job.id,revision:state.financialRevision};
   await refreshJobs();$('jobs-panel').scrollIntoView({behavior:'smooth',block:'nearest'});return job;
 }
@@ -189,7 +191,7 @@ async function refreshJobs(restore=false) {
   const revision=++state.jobsRevision,financialRevision=state.financialRevision;
   const {jobs}=await api('/api/jobs'); const previous=state.jobs;
   if(revision!==state.jobsRevision)return;
-  state.jobs=jobs;state.busy=jobs.some(j=>['queued','running'].includes(j.state));renderJobs();
+  state.jobs=jobs;state.busy=jobs.filter(j=>['queued','running'].includes(j.state)).length>=MAX_ACTIVE_JOBS;renderJobs();
   const pending=state.analysisJob;
   const newlyFinished=jobs.filter(j=>j.state==='completed' && (restore || previous.some(old=>old.id===j.id && old.state!=='completed') || pending?.id===j.id));
   const latestFinancial=newlyFinished.find(j=>j.reportId && (!pending || pending.id===j.id));
