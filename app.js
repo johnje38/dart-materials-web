@@ -34,6 +34,7 @@ function page(name) {
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
   $('page-label').textContent=labels[name];
   if(name==='library')loadLibrary().catch(e=>notify(e.message));
+  renderPicks();
 }
 async function api(path, data, {signal}={}) {
   if(window.dartCloudApi)return window.dartCloudApi(path,data);
@@ -405,7 +406,7 @@ function togglePick(company){
 }
 function renderPicks(){
   const n=state.picks.size;
-  $('pick-tray').classList.toggle('hidden',!batchEnabled()||!n);
+  $('pick-tray').classList.toggle('hidden',!batchEnabled()||!n||!$('page-batch').classList.contains('hidden'));
   $('pick-count').textContent=`담은 회사 ${n}곳`;$('batch-count').textContent=n;
   document.querySelectorAll('[data-pick]').forEach(b=>{b.textContent=pickLabel(b.dataset.pick);b.classList.toggle('picked',state.picks.has(b.dataset.pick));});
   const list=$('batch-picks');list.replaceChildren();
@@ -417,9 +418,10 @@ function renderPicks(){
   }
 }
 async function pickAllResults(){
-  const params=p=>new URLSearchParams({q:$('query').value.trim(),category:state.category,page:p,sort:$('search-sort').value});
+  const params=p=>new URLSearchParams({q:$('query').value.trim(),category:state.category,page:p,sort:$('search-sort').value,size:MAX_PICKS});
+  const trigger=$('pick-all'),label=trigger.textContent;trigger.disabled=true;trigger.textContent='담는 중…';
   let added=0,skipped=0;
-  for(let p=1;;p++){
+  try{for(let p=1;;p++){
     const data=await api('/api/discover?'+params(p));
     for(const c of data.companies){
       if(state.picks.has(c.code))continue;
@@ -427,16 +429,17 @@ async function pickAllResults(){
       state.picks.set(c.code,{name:c.name,code:c.code,stock:c.stock||''});added++;
     }
     if(p>=data.pages)break;
-    if(state.picks.size>=MAX_PICKS){skipped+=Math.max(0,data.companyCount-p*20);break;}
-  }
+    if(state.picks.size>=MAX_PICKS){skipped+=Math.max(0,data.companyCount-p*data.companies.length);break;}
+  }}finally{trigger.disabled=false;trigger.textContent=label;}
   renderPicks();
   notify(`${added}곳을 담았습니다.`+(skipped?` 최대 ${MAX_PICKS}곳까지만 담을 수 있어 ${skipped}곳은 제외했습니다.`:''));
 }
 async function runBatch(){
   if(!state.picks.size){notify('먼저 회사를 담아주세요.');return;}
   const revision=++state.batchRevision,options={companies:[...state.picks.values()],year:Number($('batch-year').value),basis:$('batch-basis').value,cashflow:$('batch-cashflow').checked};
-  const started=performance.now();$('batch-run').disabled=true;notify('');
+  const started=performance.now();$('batch-run').disabled=true;$('batch-run').textContent='조회 중…';notify('');
   $('batch-status').textContent=`${options.companies.length}곳의 핵심 재무를 조회하고 있습니다…`;
+  if(!state.batch){const root=$('batch-content');root.className='panel empty';root.replaceChildren(el('h2','','조회 중입니다…'),el('p','',`${options.companies.length}곳의 5개년 재무를 불러오고 있습니다.`));}
   try{
     const data=await window.dartCloudBatch(options,progress=>{
       if(revision!==state.batchRevision)return;
@@ -446,11 +449,15 @@ async function runBatch(){
     if(revision!==state.batchRevision)return;
     state.batch={data,options};renderBatch();
     const missing=data.companies.filter(c=>!c.found).length;
-    $('batch-status').textContent=`${data.companies.length}곳 조회 완료 · ${((performance.now()-started)/1000).toFixed(1)}초`+(missing?` · 자료 없음 ${missing}곳(비상장사 등)`:'');
+    if(!data.asOf){$('batch-status').textContent='저장된 재무 데이터가 아직 없습니다. 매주 자동 수집되며, 첫 수집이 끝나면 바로 조회됩니다.';return;}
+    $('batch-status').textContent=`${data.companies.length}곳 조회 완료 · ${((performance.now()-started)/1000).toFixed(1)}초 · DART 데이터 수집일 ${new Date(data.asOf).toLocaleDateString('ko-KR')}`+(missing?` · 자료 없음 ${missing}곳(비상장사 등)`:'');
   }catch(error){
-    if(revision===state.batchRevision)$('batch-status').textContent='';
+    if(revision===state.batchRevision){
+      $('batch-status').textContent='';
+      if(!state.batch||state.batch.options!==options){const root=$('batch-content');root.className='panel empty';root.replaceChildren(el('h2','','조회하지 못했습니다.'),el('p','',error.message));}
+    }
     throw error;
-  }finally{if(revision===state.batchRevision)$('batch-run').disabled=false;}
+  }finally{if(revision===state.batchRevision){$('batch-run').disabled=false;$('batch-run').textContent='5개년 재무 한 번에 조회';}}
 }
 function renderBatch(){
   const {data,options}=state.batch,root=$('batch-content');root.className='panel';root.replaceChildren();

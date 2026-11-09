@@ -61,12 +61,12 @@
           <div id="financial-content" class="panel empty"><h2>회사를 선택해 주세요.</h2><p>회사 찾기에서 선택하면 연간 5개년과 다음 연도의 최신 누적 분기를 조회할 수 있습니다.</p><button class="outline" data-go="companies">회사 찾기로 이동 →</button></div>
         </section>
         <section id="page-batch" class="page hidden">
-          <div class="page-heading"><div><p class="eyebrow">MULTI-COMPANY FINANCIALS</p><h1>여러 회사를 한 번에.</h1><p class="muted">담은 회사들의 5개년 주요 재무를 바로 조회하고 엑셀로 내보냅니다. 회사별 원문 분석 없이 DART 구조화 재무정보를 사용합니다.</p></div></div>
+          <div class="page-heading"><div><p class="eyebrow">MULTI-COMPANY FINANCIALS</p><h1>여러 회사를 한 번에.</h1><p class="muted">담은 회사들의 5개년 주요 재무를 바로 조회하고 엑셀로 내보냅니다. 상장사 전체의 DART 구조화 재무정보를 매주 미리 수집해 둔 값을 사용합니다.</p></div></div>
           <div class="panel pick-panel"><div class="results-heading"><h2>담은 회사 <span id="batch-count">0</span><small class="muted"> / 100</small></h2><button id="batch-clear" class="text-button" type="button">모두 비우기</button></div><div id="batch-picks" class="pick-list"></div></div>
           <form id="batch-form" class="panel form-row">
             <div><label for="batch-basis">재무 기준</label><select id="batch-basis"><option value="CFS">연결</option><option value="OFS">별도</option></select></div>
             <div><label for="batch-year">마지막 사업연도</label><input id="batch-year" type="number" min="2019" required></div>
-            <div><label class="inline-check" for="batch-cashflow"><input id="batch-cashflow" type="checkbox" checked>영업현금흐름 포함</label><small class="muted">회사별 조회라 조금 더 걸립니다</small></div>
+            <div><label class="inline-check" for="batch-cashflow"><input id="batch-cashflow" type="checkbox" checked>영업현금흐름 포함</label></div>
             <button id="batch-run" class="primary" type="submit">5개년 재무 한 번에 조회</button>
           </form>
           <p id="batch-status" class="scope-note" role="status"></p>
