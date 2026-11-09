@@ -21,6 +21,7 @@
         <button class="nav active" data-page="search"><span>⌕</span> 소재 검색</button>
         <button class="nav" data-page="companies"><span>▦</span> 회사 찾기</button>
         <button class="nav" data-page="financial"><span>▤</span> 재무 분석</button>
+        <button class="nav hidden" data-page="batch" id="nav-batch"><span>▥</span> 다중 비교</button>
         <button class="nav" data-page="library"><span>☆</span> 분석 보관함</button>
         
       </nav>
@@ -36,7 +37,7 @@
           <div class="stats"><article><span>제품 목록 검색 대상</span><strong id="stat-companies">0</strong><small>KRX 공식 상장법인 목록</small></article><article><span>분석한 보고서</span><strong id="stat-reports">0</strong><small>서버에 저장된 전체 원문</small></article><article><span>소재 분류</span><strong id="stat-categories">6</strong><small>공시 근거 기반 키워드</small></article></div>
           <form id="search-form" class="search-box"><label class="sr-only" for="query">소재·제품 검색어</label><span class="search-icon">⌕</span><input id="query" placeholder="소재·제품 검색 — 예: 반도체, 불화수소, 포토레지스트" maxlength="100"><button type="submit" class="primary">관련 회사 찾기</button></form>
           <div id="categories" class="chips" aria-label="소재 분류"></div>
-          <div class="results-heading"><h2>관련 회사 <span id="result-count">0</span></h2><span id="search-scope" class="muted"></span></div>
+          <div class="results-heading"><h2>관련 회사 <span id="result-count">0</span></h2><span id="search-scope" class="muted"></span><button id="pick-all" class="outline hidden" type="button">검색 결과 전체 담기</button></div>
           <p class="scope-note">KRX 업종·주요제품 목록과 저장된 공시에서 후보를 찾습니다. 회사를 선택한 뒤 해당 회사의 원문을 수집하고 분석합니다. 비상장사는 저장된 원문 또는 <button class="text-button" data-go="companies">회사명 찾기</button>를 이용하세요.</p>
           <p id="catalog-status" class="scope-note" role="status"></p>
           <div class="list-controls"><label for="search-sort">정렬</label><select id="search-sort"><option value="relevance">관련도</option><option value="name">회사명</option><option value="evidence">공시 근거 수</option></select><div id="search-pagination" class="pagination"></div></div>
@@ -58,6 +59,18 @@
           </form>
           <p class="scope-note">상장사 구조화 재무정보를 우선 사용합니다. 비상장사 등 자료가 제공되지 않으면 수집한 감사보고서 원문에서 재무표를 확인하세요.</p>
           <div id="financial-content" class="panel empty"><h2>회사를 선택해 주세요.</h2><p>회사 찾기에서 선택하면 연간 5개년과 다음 연도의 최신 누적 분기를 조회할 수 있습니다.</p><button class="outline" data-go="companies">회사 찾기로 이동 →</button></div>
+        </section>
+        <section id="page-batch" class="page hidden">
+          <div class="page-heading"><div><p class="eyebrow">MULTI-COMPANY FINANCIALS</p><h1>여러 회사를 한 번에.</h1><p class="muted">담은 회사들의 5개년 주요 재무를 바로 조회하고 엑셀로 내보냅니다. 회사별 원문 분석 없이 DART 구조화 재무정보를 사용합니다.</p></div></div>
+          <div class="panel pick-panel"><div class="results-heading"><h2>담은 회사 <span id="batch-count">0</span><small class="muted"> / 100</small></h2><button id="batch-clear" class="text-button" type="button">모두 비우기</button></div><div id="batch-picks" class="pick-list"></div></div>
+          <form id="batch-form" class="panel form-row">
+            <div><label for="batch-basis">재무 기준</label><select id="batch-basis"><option value="CFS">연결</option><option value="OFS">별도</option></select></div>
+            <div><label for="batch-year">마지막 사업연도</label><input id="batch-year" type="number" min="2019" required></div>
+            <div><label class="inline-check" for="batch-cashflow"><input id="batch-cashflow" type="checkbox" checked>영업현금흐름 포함</label><small class="muted">회사별 조회라 조금 더 걸립니다</small></div>
+            <button id="batch-run" class="primary" type="submit">5개년 재무 한 번에 조회</button>
+          </form>
+          <p id="batch-status" class="scope-note" role="status"></p>
+          <div id="batch-content" class="panel empty"><h2>회사를 담아주세요.</h2><p>소재 검색·회사 찾기 결과에서 ‘비교 담기’를 누르거나 ‘검색 결과 전체 담기’를 사용하세요.</p><button class="outline" data-go="search" type="button">소재 검색으로 이동 →</button></div>
         </section>
         <section id="page-collect" class="page hidden">
           <div class="page-heading"><div><p class="eyebrow">DOCUMENT LIBRARY</p><h1>검색의 범위를 넓히세요.</h1><p class="muted">보고서를 수집하면 소재 검색에 계속 재사용됩니다. 브라우저를 닫아도 GitHub Actions에서 분석을 계속합니다.</p></div></div>
@@ -82,6 +95,7 @@
       </div>
     </main>
   </div>
+  <div id="pick-tray" class="pick-tray hidden" role="region" aria-label="담은 회사"><span id="pick-count">담은 회사 0곳</span><button id="pick-tray-clear" class="text-button" type="button">비우기</button><button id="pick-tray-open" class="primary" type="button">재무 한 번에 보기 →</button></div>
   <dialog id="detail-dialog"><div class="dialog-top"><h2 id="detail-title">원문 근거</h2><button id="close-dialog" class="outline" aria-label="닫기">닫기 ×</button></div><div id="detail-body"></div></dialog>
 </body>
 </html>
