@@ -1,15 +1,202 @@
 [
-  ["불화수소", "불산", "HF", "hydrogen fluoride", "hydrofluoric acid"],
-  ["CMP 슬러리", "CMP Slurry", "연마 슬러리"],
-  ["CMP 패드", "CMP Pad"],
-  ["포토레지스트", "포토 레지스트", "photoresist", "photo resist"],
-  ["식각액", "에천트", "etchant"],
-  ["전구체", "프리커서", "precursor"],
-  ["삼불화질소", "NF3", "nitrogen trifluoride"],
-  ["육불화텅스텐", "WF6", "tungsten hexafluoride"],
-  ["실리콘 웨이퍼", "silicon wafer"],
-  ["펠리클", "pellicle"],
-  ["언더필", "underfill"],
-  ["본딩 와이어", "본딩와이어", "bonding wire"],
-  ["솔더볼", "솔더 볼", "solder ball"]
+ [
+  "불화수소",
+  "불산",
+  "불화수소산",
+  "고순도 불산",
+  "HF",
+  "hydrogen fluoride",
+  "hydrofluoric acid"
+ ],
+ [
+  "CMP 슬러리",
+  "CMP Slurry",
+  "연마 슬러리"
+ ],
+ [
+  "CMP 패드",
+  "CMP Pad",
+  "연마 패드"
+ ],
+ [
+  "포토레지스트",
+  "photoresist",
+  "감광제",
+  "감광액",
+  "감광재",
+  "감광성 수지"
+ ],
+ [
+  "식각액",
+  "에천트",
+  "etchant",
+  "식각용액",
+  "에칭액"
+ ],
+ [
+  "반도체 세정액",
+  "반도체용 세정액"
+ ],
+ [
+  "박리액",
+  "stripper"
+ ],
+ [
+  "전구체",
+  "프리커서",
+  "precursor"
+ ],
+ [
+  "삼불화질소",
+  "NF3",
+  "nitrogen trifluoride"
+ ],
+ [
+  "육불화텅스텐",
+  "WF6",
+  "tungsten hexafluoride"
+ ],
+ [
+  "실란",
+  "모노실란",
+  "디실란",
+  "SiH4",
+  "silane"
+ ],
+ [
+  "특수가스",
+  "특수가스류",
+  "specialty gas",
+  "반도체용 가스",
+  "반도체 가스"
+ ],
+ [
+  "실리콘 웨이퍼",
+  "silicon wafer",
+  "실리콘 잉곳"
+ ],
+ [
+  "SiC",
+  "탄화규소",
+  "실리콘카바이드",
+  "silicon carbide"
+ ],
+ [
+  "블랭크마스크",
+  "blank mask"
+ ],
+ [
+  "포토마스크",
+  "photomask",
+  "photo mask"
+ ],
+ [
+  "펠리클",
+  "pellicle"
+ ],
+ [
+  "스퍼터링 타겟",
+  "스퍼터링 타깃",
+  "sputtering target",
+  "타겟재"
+ ],
+ [
+  "에폭시 몰딩",
+  "에폭시 몰딩 컴파운드",
+  "epoxy molding compound"
+ ],
+ [
+  "언더필",
+  "underfill"
+ ],
+ [
+  "본딩 와이어",
+  "bonding wire"
+ ],
+ [
+  "솔더볼",
+  "solder ball"
+ ],
+ [
+  "솔더 페이스트",
+  "solder paste"
+ ],
+ [
+  "반도체 패키지 기판",
+  "패키지 기판",
+  "FC-BGA",
+  "FCBGA",
+  "플립칩 기판",
+  "package substrate"
+ ],
+ [
+  "리드프레임",
+  "lead frame"
+ ],
+ [
+  "HBM",
+  "고대역폭 메모리",
+  "high bandwidth memory"
+ ],
+ [
+  "MLCC",
+  "적층세라믹콘덴서",
+  "적층세라믹커패시터"
+ ],
+ [
+  "양극재",
+  "양극활물질",
+  "양극소재",
+  "cathode material",
+  "cathode"
+ ],
+ [
+  "음극재",
+  "음극활물질",
+  "음극소재",
+  "anode material"
+ ],
+ [
+  "전해액",
+  "전해질",
+  "electrolyte"
+ ],
+ [
+  "분리막",
+  "세퍼레이터",
+  "separator"
+ ],
+ [
+  "동박",
+  "전지박",
+  "일렉포일",
+  "copper foil"
+ ],
+ [
+  "이차전지",
+  "2차전지",
+  "리튬이온전지",
+  "secondary battery"
+ ],
+ [
+  "탄소나노튜브",
+  "CNT",
+  "carbon nanotube"
+ ],
+ [
+  "OLED 소재",
+  "유기발광재료",
+  "OLED 재료",
+  "발광재료"
+ ],
+ [
+  "편광판",
+  "편광필름",
+  "polarizer"
+ ],
+ [
+  "쿼츠",
+  "석영",
+  "quartz"
+ ]
 ]
