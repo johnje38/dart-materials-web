@@ -449,7 +449,7 @@ async function runBatch(){
     if(revision!==state.batchRevision)return;
     state.batch={data,options};renderBatch();
     const missing=data.companies.filter(c=>!c.found).length;
-    if(!data.asOf){$('batch-status').textContent='저장된 재무 데이터가 아직 없습니다. 매주 자동 수집되며, 첫 수집이 끝나면 바로 조회됩니다.';return;}
+    if(!data.asOf){$('batch-status').textContent='담은 회사 모두 미리 수집한 재무가 없습니다(비상장사 등 DART 구조화 재무 미제공). 회사 찾기에서 ‘선택하고 자동 분석’으로 감사보고서 원문을 분석하세요.';return;}
     $('batch-status').textContent=`${data.companies.length}곳 조회 완료 · ${((performance.now()-started)/1000).toFixed(1)}초 · DART 데이터 수집일 ${new Date(data.asOf).toLocaleDateString('ko-KR')}`+(missing?` · 자료 없음 ${missing}곳(비상장사 등)`:'');
   }catch(error){
     if(revision===state.batchRevision){
