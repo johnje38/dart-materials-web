@@ -107,6 +107,7 @@ function renderResults(data) {
     const first=company.evidence.find(e=>readable(e.text).length>=40),shorts=company.evidence.slice(0,4);
     const text=company.catalogEvidence?.products || first?.text || [...new Set(shorts.map(e=>readable(e.text)).filter(Boolean))].join(' · ');
     const words=company.catalogEvidence?.matchedWords || first?.words || [...new Set(shorts.flatMap(e=>e.words||[]))];
+    card.append(meta(company,company.catalogEvidence?null:first||shorts[0]));
     card.append(excerpt(text,words));
     const footer=el('div','card-footer');footer.append(el('span','',company.catalogEvidence?`KRX 주요제품 후보 · 저장 공시 ${company.reportCount}건`:`공시 근거 ${company.evidenceCount}개 · 보고서 ${company.reportCount}건`));
     footer.append(button('근거 보기 ↗',()=>showEvidence(company),'text-button'));card.append(footer);
@@ -117,6 +118,19 @@ function renderResults(data) {
     actions.append(button(company.research?.favorite?'★ 관심·메모':'☆ 관심·메모',()=>editResearch(company.code,company.name).catch(e=>notify(e.message))));
     card.append(actions);list.append(card);
   }
+}
+// Which company this is (KRX industry) and where the excerpt comes from, so an equipment maker
+// or a patent-list mention reads differently from a material maker's product line.
+function meta(company,evidence) {
+  const where=!evidence?'KRX 주요제품':evidence.core===true?'사업보고서 '+(evidence.section||'사업의 내용').replace(/^\d+\.\s*/,''):
+    evidence.core===false?'사업보고서 연구개발·기타 참고사항':'저장한 공시 원문';
+  const node=el('p','card-meta');
+  if(company.industry){
+    const equipment=/기계 제조업|정밀기기|건설업|엔지니어링|도매업|운송장비/.test(company.industry);
+    node.append(el('span',equipment?'industry equipment':'industry','업종: '+company.industry+(equipment?' (장비·설비 업종)':'')),' · ');
+  }
+  node.append('근거: '+where);
+  return node;
 }
 // Search terms match with spaces ignored ("Photo Resist" = photoresist), so find them the same way.
 function termPattern(terms) {
