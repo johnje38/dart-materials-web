@@ -102,12 +102,12 @@ function renderResults(data) {
     const card=companyCard(company.name,company.code);
     const tags=el('div','tag-row'); company.categories.forEach(c=>tags.append(el('span','tag',c))); card.append(tags);
     if(company.research?.status && company.research.status!=='unreviewed')tags.append(el('span','tag','사용자 검토: '+({confirmed:'제조판매 확인',mention:'언급만 확인',exclude:'제외로 표시'})[company.research.status]));
-    const first=company.evidence[0];
-    const preview=(company.catalogEvidence?.products || first?.text || '').replace(/\s+/g,' ');
-    const terms=company.catalogEvidence?.matchedWords || first?.words || [];
-    const positions=terms.map(w=>preview.toLowerCase().indexOf(w.toLowerCase())).filter(i=>i>=0);
-    const position=positions.length?Math.min(...positions):0;
-    card.append(el('p','excerpt',preview.slice(Math.max(0,position-30),Math.max(0,position-30)+150)+'…'));
+    // Some matches are only a heading or image caption ("(1) Sputtering Target"): prefer a real
+    // paragraph, else show the short ones together.
+    const first=company.evidence.find(e=>readable(e.text).length>=40),shorts=company.evidence.slice(0,4);
+    const text=company.catalogEvidence?.products || first?.text || [...new Set(shorts.map(e=>readable(e.text)).filter(Boolean))].join(' · ');
+    const words=company.catalogEvidence?.matchedWords || first?.words || [...new Set(shorts.flatMap(e=>e.words||[]))];
+    card.append(excerpt(text,words));
     const footer=el('div','card-footer');footer.append(el('span','',company.catalogEvidence?`KRX 주요제품 후보 · 저장 공시 ${company.reportCount}건`:`공시 근거 ${company.evidenceCount}개 · 보고서 ${company.reportCount}건`));
     footer.append(button('근거 보기 ↗',()=>showEvidence(company),'text-button'));card.append(footer);
     const actions=el('div','card-actions');
@@ -117,6 +117,47 @@ function renderResults(data) {
     actions.append(button(company.research?.favorite?'★ 관심·메모':'☆ 관심·메모',()=>editResearch(company.code,company.name).catch(e=>notify(e.message))));
     card.append(actions);list.append(card);
   }
+}
+// Search terms match with spaces ignored ("Photo Resist" = photoresist), so find them the same way.
+function termPattern(terms) {
+  const parts=terms.filter(Boolean).map(t=>[...String(t).replace(/\s+/g,'')].map(c=>c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('\\s*'));
+  return parts.length?new RegExp(parts.sort((a,b)=>b.length-a.length).join('|'),'gi'):null;
+}
+// Annual-report text arrives with tables flattened to "cell | cell" and paragraphs glued
+// ("있습니다.Slurry"): keep only the wording cells and put the spaces back.
+function readable(text) {
+  text=String(text||'');
+  if(text.includes('|'))text=text.split(/\s*\|\s*|\n+/).map(c=>c.trim()).filter(c=>c&&!/^[-−△()\d.,%\s]*$/.test(c)).join(' · ');
+  return text.replace(/[^\s\]\[|]+\.(?:jpe?g|png|gif|bmp)\b/gi,'').replace(/([가-힣][.!?])(?=[A-Za-z가-힣(])/g,'$1 ').replace(/\s+/g,' ').trim();
+}
+// The sentence (or table cell) holding the first match, with the match in bold. Starts and ends at
+// sentence boundaries when one is near, so the card reads as whole sentences; "…" marks a real cut.
+// A fresh regex each use: a shared /g regex carries lastIndex from one card into the next.
+const boundaries=()=>/[.!?](?=\s)|\s·(?=\s)/g;
+function excerpt(raw,terms) {
+  const text=readable(raw),pattern=termPattern(terms),node=el('p','excerpt');
+  const hit=pattern?pattern.exec(text):null,position=hit?hit.index:0,matchEnd=hit?position+hit[0].length:0;
+  // Start: the last boundary within 120 characters before the match, else a word ~60 before it.
+  let start=0,cut=false;
+  if(position>120||[...text.slice(0,position).matchAll(boundaries())].length){
+    const from=Math.max(0,position-120),lead=[...text.slice(from,position).matchAll(boundaries())].pop();
+    if(lead)start=from+lead.index+lead[0].length+1;
+    else if(from>0){start=Math.max(0,position-60);const space=text.indexOf(' ',start);if(space>=0&&space<position)start=space+1;cut=true;}
+  }
+  // End: the first boundary after 120 characters (and after the match), within 260; else a word near 200.
+  let end=text.length,endCut=false;
+  if(end-start>260){
+    const after=boundaries();after.lastIndex=Math.max(start+120,matchEnd);const tail=after.exec(text);
+    if(tail&&tail.index<start+260)end=tail.index+tail[0].length;
+    else{end=Math.max(text.lastIndexOf(' ',start+200),matchEnd);endCut=true;}
+  }
+  const shown=text.slice(start,end).replace(/\s·$/,'');
+  if(cut)node.append('…');
+  let last=0;
+  if(pattern){pattern.lastIndex=0;for(const m of shown.matchAll(pattern)){node.append(shown.slice(last,m.index),el('mark','',m[0]));last=m.index+m[0].length;}}
+  node.append(shown.slice(last));
+  if(endCut)node.append('…');
+  return node;
 }
 function companyCard(name,code,stock='') {
   const card=el('article','company-card'),top=el('div','card-top'),title=el('div');
