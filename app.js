@@ -339,6 +339,14 @@ function renderFinancial(report,id) {
 function showCalculation(col,metric) {
   const body=dialog(`${col.label} · ${metrics[metric]}`);
   body.append(el('h3','',number(col.values[metric],percent.has(metric))));
+  body.append(el('p','scope-note',`${col.year}년 · ${col.report==='11011'?'연간':col.label} · ${(col.basis||state.report?.basis)==='CFS'?'연결':'별도'} · ${col.source==='audit'?'감사보고서 재무표 인식':'DART 구조화 재무정보'}`));
+  if(col.values[metric]==null){
+    const reason=col.status==='013'?'해당 기간·기준의 구조화 재무자료 없음. 원문 감사보고서의 자료 유무는 별도 확인이 필요합니다.':formula[metric]?'계산에 필요한 입력값 누락 또는 분모가 0입니다.':col.source==='audit'?'원문에서 이 항목의 금액을 확인하지 못했습니다. 미공시 또는 표 인식 누락 여부를 원문과 대조하세요.':'응답에서 이 계정의 값을 찾지 못했습니다. 미공시 또는 계정 매칭 실패 여부는 원문 확인이 필요합니다.';
+    body.append(el('p','quality-warning','누락 사유: '+reason));
+    (col.warnings||[]).forEach(w=>body.append(el('p','quality-warning',w)));
+  }
+  if(col.acquisition?.document==='download_failed')body.append(el('p','quality-warning','공시 원문 수집 실패 · 주석 기반 항목은 원문을 다시 수집한 후 확인하세요.'));
+  if(col.acquisition?.document==='analysis_failed')body.append(el('p','quality-warning','공시 원문 표 인식 실패 · 원문과 직접 대조하세요.'));
   if(formula[metric])body.append(el('p','scope-note','계산식: '+formula[metric]));
   const source=col.sources?.[metric];
   if(source){body.append(el('pre','raw-values',`계정: ${source.account_nm}\n계정 ID: ${source.account_id}\nAPI 필드: ${source.field}\n원자료: ${source.value} ${source.currency}`));sourceLinks(body,{rcept_no:source.receipt});}
@@ -468,7 +476,7 @@ function renderBatch(){
   data.years.slice().reverse().forEach(y=>{const o=el('option','',`${y}년`);o.value=y;o.selected=y===state.batchYear;select.append(o);});
   select.addEventListener('change',()=>{state.batchYear=Number(select.value);renderBatch();});
   actions.append(select,button('Excel .xlsx ↓',()=>window.dartCloudBatchExcel(data,options),'primary'));
-  bar.append(heading,actions);root.append(bar,el('p','unit-label','금액: 억원 · 비율: % · 빈 칸(—)은 미공시 값이며 0이 아닙니다.'));
+  bar.append(heading,actions);root.append(bar,el('p','unit-label','금액: 억원 · 비율: % · 숫자 또는 —를 누르면 출처·누락 이유를 확인합니다. 빈칸은 0이나 미공시 확정이 아닙니다. Excel에는 원자료와 실제 수식이 포함됩니다.'));
   const cols=[['revenue','매출액'],['operatingIncome','영업이익'],['operatingMargin','영업이익률',1],['netIncome','당기순이익'],
     ...(options.cashflow?[['operatingCashFlow','영업현금흐름']]:[]),['assets','자산총계'],['liabilities','부채총계'],['equity','자본총계'],['debtRatio','부채비율',1],['revenueGrowth','매출성장률',1]];
   const fmt=(v,pct)=>v===null||v===undefined?'—':new Intl.NumberFormat('ko-KR',{maximumFractionDigits:1}).format(v)+(pct?'%':'');
@@ -477,7 +485,17 @@ function renderBatch(){
   const body=el('tbody');
   for(const c of data.companies){
     const r=c.rows.find(x=>x.year===state.batchYear)||{},row=el('tr',c.found?'':'missing');
-    row.append(el('th','',c.name),el('td','',c.basisLabel),...cols.map(([k,,pct])=>el('td','',fmt(r[k],pct))));body.append(row);
+    row.append(el('th','',c.name),el('td','',c.basisLabel),...cols.map(([k,label,pct])=>{
+      const cell=el('td');cell.append(button(fmt(r[k],pct),()=>{
+        const box=dialog(`${c.name} · ${r.year}년 · ${label}`);
+        box.append(el('p','',`재무 기준: ${c.basisLabel} · ${r.year} 사업연도 · 연간`),el('h3','',fmt(r[k],pct)));
+        box.append(el('p','scope-note','출처: Open DART 공용 재무 캐시 · 원문 접수번호/위치/개별 실패 이력은 이 캐시에 저장되지 않습니다.'));
+        box.append(el('p','',`캐시 갱신 시각: ${r.source?.updated||'기록 없음'} (공시일과 다를 수 있음)`));
+        if(r[k]==null)box.append(el('p','quality-warning',r.missing?.[k]||'계산 입력값 누락 또는 분모 0 · Excel 원자료와 계산식을 확인하세요.'));
+        else if(c.rawYears?.[r.year]?.[k]!=null)box.append(el('pre','raw-values',`수집 금액: ${c.rawYears[r.year][k].toLocaleString()}원\n환산: 원 ÷ 100,000,000`));
+        box.append(el('p','scope-note','원문 접수번호·계정별 근거가 필요하면 이 회사의 개별 상세 분석 결과에서 확인하세요.'));
+      },'value-button'));return cell;
+    }));body.append(row);
   }
   table.append(body);const wrap=el('div','table-container');wrap.append(table);root.append(wrap);
 }
