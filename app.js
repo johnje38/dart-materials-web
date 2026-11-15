@@ -404,9 +404,9 @@ function showCalculation(col,metric) {
     if(metric==='netDebt'&&col.values.cash==null)body.append(el('p','quality-warning','현금및현금성자산 미입수로 계산할 수 없습니다.'));
     if(metric==='netDebt'&&col.values.netDebt<0)body.append(el('p','','순현금 상태: 현금및현금성자산이 총차입금보다 많습니다.'));
     for(const component of detail?.components||[]){
-      const block=el('article','evidence');block.append(el('h3','',component.account_nm),el('pre','raw-values',`${component.value}원 · ${component.currency}\n필드: ${component.field}`));sourceLinks(block,{rcept_no:component.receipt});body.append(block);
+      renderMetricSource(body,col,component.account_nm,component);
     }
-    if(col.sources?.cash){const c=col.sources.cash;body.append(el('p','',`현금및현금성자산: ${c.value} ${c.currency}`));sourceLinks(body,{rcept_no:c.receipt});}
+    if(metric==='netDebt'&&col.sources?.cash)renderMetricSource(body,col,'cash',col.sources.cash);
     return;
   }
   body.append(el('p','scope-note',`${col.year}년 · ${col.report==='11011'?'연간':col.label} · ${(col.basis||state.report?.basis)==='CFS'?'연결':'별도'} · ${col.source==='audit'?'감사보고서 재무표 인식':'DART 구조화 재무정보'}`));
@@ -419,9 +419,56 @@ function showCalculation(col,metric) {
   if(col.acquisition?.document==='analysis_failed')body.append(el('p','quality-warning','공시 원문 표 인식 실패 · 원문과 직접 대조하세요.'));
   if(formula[metric])body.append(el('p','scope-note','계산식: '+formula[metric]));
   const source=col.sources?.[metric];
-  if(source){body.append(el('pre','raw-values',`계정: ${source.account_nm}\n계정 ID: ${source.account_id}\nAPI 필드: ${source.field}\n원자료: ${source.value} ${source.currency}`));sourceLinks(body,{rcept_no:source.receipt});}
-  else {body.append(el('pre','raw-values',JSON.stringify({values:col.values,depreciationSource:col.supplement?.depreciationSource||null},null,2)));if(col.receipt)sourceLinks(body,{rcept_no:col.receipt});}
+  if(source)renderMetricSource(body,col,metric,source);
+  else {
+    const inputs={margin:['operating','revenue'],liabilityRatio:['liabilities','equity'],
+      liabilitiesLessCash:['liabilities','cash'],liabilitiesLessCashRatio:['liabilities','cash','equity'],
+      growth:['revenue','previousRevenue'],ebitda:['operating','depreciation','amortization']}[metric]||[metric];
+    body.append(el('h3','','계산에 사용한 원자료'));
+    for(const key of inputs){
+      if(col.sources?.[key])renderMetricSource(body,col,key,col.sources[key]);
+      else if(['depreciation','amortization'].includes(key)){
+        const d=col.supplement?.depreciationSource,box=el('article','evidence');
+        box.append(el('h3','',metrics[key]),el('p','',number(col.values[key])));
+        if(d){box.append(el('p','scope-note',`${d.section||'현금흐름 주석'} · ${d.file||'파일 위치 미보관'} · 표 ${d.table||'위치 미보관'} · 단위 ${d.unit||'미보관'}`),el('p','',d.validation||'공시 주석에서 추출한 상각비'));
+          sourceLinks(box,{rcept_no:d.receipt});
+        }else box.append(el('p','quality-warning','이 항목의 상세 원문 위치를 저장하지 못했습니다. 원문 대조가 필요합니다.'));
+        body.append(box);
+      }else body.append(el('p','quality-warning',`${metrics[key]||key}: 원자료 출처 미입수`));
+    }
+  }
   body.append(el('p','scope-note','누락값은 0이 아닙니다. XLSX 또는 CSV 내보내기에는 원자료와 실제 계산 수식이 포함됩니다.'));
+}
+function renderMetricSource(parent,col,key,source){
+  const companyCode=state.company?.code;
+  const box=el('article','evidence');
+  box.append(el('h3','',metrics[key]||(key==='previousRevenue'?'전년 동기 매출액':key)),
+    el('p','',`${source.value??'미입수'} ${source.currency||'통화 미보관'}`),
+    el('p','scope-note',`${source.year||(key==='previousRevenue'?col.year-1:col.year)}년 · ${(source.basis||col.basis||state.report?.basis)==='CFS'?'연결':'별도'} · ${source.statement||'재무제표 구분 미보관'} · ${source.field||'필드 미보관'}`),
+    el('p','',`계정: ${source.account_nm||'미보관'} · 계정 ID: ${source.account_id||'사용자 정의/미보관'}`),
+    el('p','scope-note',`공시 접수번호: ${source.receipt||'미보관'} · ${col.source==='audit'?'감사보고서 원문에서 추출한 값':'Open DART 구조화 응답의 계정값'}`));
+  sourceLinks(box,{rcept_no:source.receipt});
+  if(source.sourceRow){const details=el('details');details.append(el('summary','','저장된 계정 응답 확인'),el('pre','raw-values',JSON.stringify(source.sourceRow,null,2)));box.append(details);}
+  if(source.receipt&&source.account_nm&&state.company){
+    box.append(button('저장 원문에서 대조 후보 찾기',async()=>{
+      const result=el('div');box.append(result);result.append(el('p','muted','저장된 공시를 확인하고 있습니다…'));
+      try{
+        const data=await api('/api/company?'+new URLSearchParams({code:companyCode}));
+        const matches=findSourceCandidates(data,source);
+        result.replaceChildren(el('p','quality-warning','아래 내용은 같은 접수번호·계정명으로 찾은 대조 후보입니다. 금액·단위·당기/전기·연결/별도를 원문에서 확인하세요.'));
+        if(!matches.length)result.append(el('p','','저장된 원문 범위에서 해당 계정의 위치를 찾지 못했습니다. 위 DART 원문 링크에서 확인하세요.'));
+        for(const b of matches)result.append(el('p','scope-note',`${b.section||'재무표'} · ${b.file||'파일 미보관'} · 블록 ${b.block??'미보관'}`),el('pre','raw-values',b.text));
+      }catch(e){result.replaceChildren(el('p','quality-warning','원문 대조 후보 조회 실패: '+e.message));}
+    },'outline'));
+  }
+  parent.append(box);
+}
+function findSourceCandidates(data,source){
+  const normalize=s=>String(s||'').replace(/\s+/g,'');
+  const name=normalize(source.account_nm);
+  if(!name||!/^\d{14}$/.test(source.receipt||''))return [];
+  return (data.reports||[]).filter(r=>r.filing?.rcept_no===source.receipt)
+    .flatMap(r=>r.blocks||[]).filter(b=>normalize(b.text).includes(name)).slice(0,3);
 }
 async function downloadReport(id,format) {
   if(window.dartCloudDownload){notify('수식과 원자료가 포함된 파일을 만드는 중입니다…');await window.dartCloudDownload(state.report,format);notify('다운로드를 시작했습니다.');return;}
