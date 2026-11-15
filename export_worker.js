@@ -5580,21 +5580,24 @@
       return $name;
     },
     financialFormulaRows(report) {
-      var t2, t3, t4, t5, i, guarded, t6, rows, t7, _i, metric, row, t8, t9, t10, t11, t12, t13, letter, v, r, formula, t14, key,
+      var t2, t3, t4, t5, i, guarded, t6, rows, t7, _i, metric, row, t8, t9, t10, t11, t12, t13, t14, letter, v, r, formula, t15, key,
+        _s19_ = "interestBearingDebt",
         _s12_ = "depreciation",
         _s12_0 = "amortization",
         _s15_ = "previousRevenue",
+        _s4_ = "cash",
         _s9_ = "operating",
         _s7_ = "revenue",
         _s11_ = "liabilities",
         _s6_ = "equity",
-        _s19_ = "liabilitiesLessCash",
+        _s19_0 = "liabilitiesLessCash",
         _s5_ = "gross",
         columns = A.List_List$from(type$.Iterable_dynamic._as(report.$index(0, "columns")), true, type$.Map_String_dynamic),
-        t1 = B.Map_umm8v.get$keys(B.Map_umm8v),
+        t1 = B.Map_bXhDp.get$keys(B.Map_bXhDp),
         metrics = A.List_List$_of(t1, A._instanceType(t1)._eval$1("Iterable.E"));
       t1 = type$.String;
       t2 = A.List_List$_of(B.Map_FFAXA.get$keys(B.Map_FFAXA), t1);
+      t2.push(_s19_);
       t2.push(_s12_);
       t2.push(_s12_0);
       t2.push(_s15_);
@@ -5615,51 +5618,59 @@
       rows = A._setArrayType([t3], type$.JSArray_List_nullable_Object);
       for (t3 = metrics.length, t7 = type$.JSArray_String, _i = 0; _i < metrics.length; metrics.length === t3 || (0, A.throwConcurrentModificationError)(metrics), ++_i) {
         metric = metrics[_i];
-        row = [B.Map_umm8v.$index(0, metric)];
-        for (t8 = "growth" === metric, t9 = "liabilitiesLessCashRatio" === metric, t10 = _s19_ === metric, t11 = "liabilityRatio" === metric, t12 = "ebitda" === metric, t13 = "margin" === metric, i = 0; i < columns.length;) {
+        row = [B.Map_bXhDp.$index(0, metric)];
+        for (t8 = "growth" === metric, t9 = "liabilitiesLessCashRatio" === metric, t10 = _s19_0 === metric, t11 = "liabilityRatio" === metric, t12 = "ebitda" === metric, t13 = "margin" === metric, t14 = "netDebt" === metric, i = 0; i < columns.length;) {
           ++i;
           letter = A.columnName(i);
           v = new A.financialFormulaRows_v(letter, t1);
           r = new A.financialFormulaRows_r(letter, t4);
           formula = A._Cell$named("formula");
           if (B.JSArray_methods.contains$1(t2, metric))
-            t14 = formula._value = guarded.call$2(A._setArrayType([r.call$1(metric)], t7), A.S(r.call$1(metric)) + "/100000000");
+            t15 = formula._value = guarded.call$2(A._setArrayType([r.call$1(metric)], t7), A.S(r.call$1(metric)) + "/100000000");
           else {
             $label0$0: {
+              if (t14) {
+                t15 = guarded.call$2(A._setArrayType([v.call$1(_s19_), v.call$1(_s4_)], t7), A.S(v.call$1(_s19_)) + "-" + A.S(v.call$1(_s4_)));
+                break $label0$0;
+              }
               if (t13) {
-                t14 = guarded.call$3$condition(A._setArrayType([v.call$1(_s9_), v.call$1(_s7_)], t7), A.S(v.call$1(_s9_)) + "/" + A.S(v.call$1(_s7_)) + "*100", A.S(v.call$1(_s7_)) + "<>0");
+                t15 = guarded.call$3$condition(A._setArrayType([v.call$1(_s9_), v.call$1(_s7_)], t7), A.S(v.call$1(_s9_)) + "/" + A.S(v.call$1(_s7_)) + "*100", A.S(v.call$1(_s7_)) + "<>0");
                 break $label0$0;
               }
               if (t12) {
-                t14 = guarded.call$2(A._setArrayType([v.call$1(_s9_), v.call$1(_s12_), v.call$1(_s12_0)], t7), A.S(v.call$1(_s9_)) + "+" + A.S(v.call$1(_s12_)) + "+" + A.S(v.call$1(_s12_0)));
+                t15 = guarded.call$2(A._setArrayType([v.call$1(_s9_), v.call$1(_s12_), v.call$1(_s12_0)], t7), A.S(v.call$1(_s9_)) + "+" + A.S(v.call$1(_s12_)) + "+" + A.S(v.call$1(_s12_0)));
                 break $label0$0;
               }
               if (t11) {
-                t14 = guarded.call$3$condition(A._setArrayType([v.call$1(_s11_), v.call$1(_s6_)], t7), A.S(v.call$1(_s11_)) + "/" + A.S(v.call$1(_s6_)) + "*100", A.S(v.call$1(_s6_)) + "<>0");
+                t15 = guarded.call$3$condition(A._setArrayType([v.call$1(_s11_), v.call$1(_s6_)], t7), A.S(v.call$1(_s11_)) + "/" + A.S(v.call$1(_s6_)) + "*100", A.S(v.call$1(_s6_)) + "<>0");
                 break $label0$0;
               }
               if (t10) {
-                t14 = guarded.call$2(A._setArrayType([v.call$1(_s11_), v.call$1("cash")], t7), A.S(v.call$1(_s11_)) + "-" + A.S(v.call$1("cash")));
+                t15 = guarded.call$2(A._setArrayType([v.call$1(_s11_), v.call$1(_s4_)], t7), A.S(v.call$1(_s11_)) + "-" + A.S(v.call$1(_s4_)));
                 break $label0$0;
               }
               if (t9) {
-                t14 = guarded.call$3$condition(A._setArrayType([v.call$1(_s19_), v.call$1(_s6_)], t7), A.S(v.call$1(_s19_)) + "/" + A.S(v.call$1(_s6_)) + "*100", A.S(v.call$1(_s6_)) + "<>0");
+                t15 = guarded.call$3$condition(A._setArrayType([v.call$1(_s19_0), v.call$1(_s6_)], t7), A.S(v.call$1(_s19_0)) + "/" + A.S(v.call$1(_s6_)) + "*100", A.S(v.call$1(_s6_)) + "<>0");
                 break $label0$0;
               }
               if (t8) {
-                t14 = guarded.call$3$condition(A._setArrayType([r.call$1(_s7_), r.call$1(_s15_)], t7), "(" + A.S(r.call$1(_s7_)) + "/" + A.S(r.call$1(_s15_)) + "-1)*100", A.S(r.call$1(_s15_)) + ">0");
+                t15 = guarded.call$3$condition(A._setArrayType([r.call$1(_s7_), r.call$1(_s15_)], t7), "(" + A.S(r.call$1(_s7_)) + "/" + A.S(r.call$1(_s15_)) + "-1)*100", A.S(r.call$1(_s15_)) + ">0");
                 break $label0$0;
               }
-              t14 = '=""';
+              t15 = '=""';
               break $label0$0;
             }
-            t14 = formula._value = t14;
+            t15 = formula._value = t15;
           }
-          if (t14 === formula)
+          if (t15 === formula)
             A.throwExpression(A.LateError$localNI(formula._name));
-          row.push(new A.Formula(t14));
+          row.push(new A.Formula(t15));
         }
         $label1$1: {
+          if (t14) {
+            t8 = "\ucc28\uc785\uae08\xb7\uc0ac\ucc44\xb7\ub9ac\uc2a4\ubd80\ucc44\u2212\ud604\uae08\ubc0f\ud604\uae08\uc131\uc790\uc0b0. \uc74c\uc218\ub294 \uc21c\ud604\uae08. \ub2e8\uae30\uae08\uc735\uc0c1\ud488 \uc81c\uc678.";
+            break $label1$1;
+          }
           if (t13) {
             t8 = "\uc601\uc5c5\uc774\uc775/\ub9e4\ucd9c\uc561\xd7100";
             break $label1$1;
@@ -5697,7 +5708,7 @@
       B.JSArray_methods.add$1(rows, t1);
       for (t1 = t2.length, _i = 0; _i < t2.length; t2.length === t1 || (0, A.throwConcurrentModificationError)(t2), ++_i) {
         key = t2[_i];
-        t3 = B.Map_umm8v.$index(0, key);
+        t3 = B.Map_bXhDp.$index(0, key);
         if (t3 == null)
           t3 = key === "previousRevenue" ? "\uc804\ub144 \ub3d9\uae30 \ub9e4\ucd9c\uc561" : "\uc138\uc804\uc774\uc775";
         t3 = [t3];
@@ -5766,7 +5777,7 @@
           r = t4._as(entry.value);
           t8 = t6.$index(col, "label");
           t9 = entry.key;
-          t10 = B.Map_umm8v.$index(0, t9);
+          t10 = B.Map_bXhDp.$index(0, t9);
           t9 = t10 == null ? t9 : t10;
           t10 = J.getInterceptor$asx(r);
           B.JSArray_methods.add$1(sources, [t8, t9, t10.$index(r, "account_nm"), t10.$index(r, "account_id"), t10.$index(r, "field"), t10.$index(r, "value"), _s45_ + A.S(t10.$index(r, "receipt"))]);
@@ -5839,7 +5850,7 @@
         }
       }
       sheet.call$2("\ucd9c\ucc98", source);
-      t1 = A._setArrayType([["\ud56d\ubaa9", "\uc124\uba85"], ["\ud68c\uc0ac", A.S(report.$index(0, "company")) + " / " + A.S(report.$index(0, "corp_code"))], ["\uae30\uc900", A.S(report.$index(0, "basis")) + " / \uae30\uc900\uc77c " + A.S(report.$index(0, "asOf"))], ["\uc6d0\uc790\ub8cc", "\uc7ac\ubb34\uc694\uc57d \ud558\ub2e8\uc758 \uc6d0 \ub2e8\uc704 \uc6d0\uc790\ub8cc\ub97c \uc218\uc815\ud558\uba74 \uac19\uc740 \uc2dc\ud2b8 \uc704 \ud45c\uac00 \uc7ac\uacc4\uc0b0\ub429\ub2c8\ub2e4."], ["\uc11c\uc2dd", "\uae08\uc561 \ud45c\uc2dc\ub294 \uc5b5\uc6d0\uc785\ub2c8\ub2e4. \ube44\uc728 \ud589\uc740 %\uac00 \uacf1\ud574\uc9c4 \uc22b\uc790\uc785\ub2c8\ub2e4(14.47 = 14.47%)."], ["\uac80\uc99d", "\uac01 \uc2dc\ud2b8\uc758 \uc218\uc2dd\uacfc \ucd9c\ucc98 \uc2dc\ud2b8\ub97c \ud655\uc778\ud558\uc138\uc694. \uc7ac\ubb34\uc694\uc57d \ub9e8 \uc544\ub798 \ub3c5\ub9bd \uac80\uc99d\uc2dd\uc740 0\uc774 \uc815\uc0c1\uc785\ub2c8\ub2e4."], ["EBITDA", "\uc601\uc5c5\uc774\uc775+\uc804\uccb4 \uac10\uac00\uc0c1\uac01\ube44+\ubb34\ud615\uc790\uc0b0\uc0c1\uac01\ube44. \uc8fc\uc11d \uc774\uc775\uac12\uacfc \ub3d9\uc77c\uae30\uac04 \uc7ac\ubb34 API\ub97c \ub300\uc870\ud55c \uacbd\uc6b0\uc5d0\ub9cc \uc0ac\uc6a9\ud569\ub2c8\ub2e4."], ["\uc21c\ubd80\ucc44 \uc8fc\uc758", "\ubd80\ucc44\ucd1d\uacc4\u2212\ud604\uae08 \uc9c0\ud45c\ub294 \uc774\uc790\ubd80\ucc28\uc785\uae08 \uae30\uc900 \uc21c\ucc28\uc785\uae08\uc774 \uc544\ub2d9\ub2c8\ub2e4."], ["\uc81c\ud488 \ubd84\ub958", "\ud68c\uc0ac\uac00 \uacf5\uc2dc\ud55c \uc0ac\uc5c5\ubd80\ubb38\xb7\uc81c\ud488\uad70 \uae30\uc900\uc774\uba70 \uac1c\ubcc4 HF\xb7CMP \uc81c\ud488 \ub9e4\ucd9c\uc744 \uc784\uc758\ub85c \ub098\ub204\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4."], ["\ub0b4\uc218\xb7\uc218\ucd9c", "\uacf5\uc2dc\uc758 \ub0b4\uc218\xb7\uc218\ucd9c \uae30\uc900\uc774\uba70 \ud574\uc678 \uc9c0\uc5ed\ub9e4\ucd9c\uacfc \ub2e4\ub985\ub2c8\ub2e4."], ["\ub204\ub77d\uac12", "\uc790\ub8cc \uc5c6\uc74c\uc740 0\uc774 \uc544\ub2d9\ub2c8\ub2e4. \ud53c\uc5f0\uc0b0\uc790\uac00 \uc5c6\uac70\ub098 \ubd84\ubaa8\uac00 0\uc774\uba74 \uacc4\uc0b0\uac12\uc740 \ube48\uce78\uc785\ub2c8\ub2e4."]], t1);
+      t1 = A._setArrayType([["\ud56d\ubaa9", "\uc124\uba85"], ["\ud68c\uc0ac", A.S(report.$index(0, "company")) + " / " + A.S(report.$index(0, "corp_code"))], ["\uae30\uc900", A.S(report.$index(0, "basis")) + " / \uae30\uc900\uc77c " + A.S(report.$index(0, "asOf"))], ["\uc6d0\uc790\ub8cc", "\uc7ac\ubb34\uc694\uc57d \ud558\ub2e8\uc758 \uc6d0 \ub2e8\uc704 \uc6d0\uc790\ub8cc\ub97c \uc218\uc815\ud558\uba74 \uac19\uc740 \uc2dc\ud2b8 \uc704 \ud45c\uac00 \uc7ac\uacc4\uc0b0\ub429\ub2c8\ub2e4."], ["\uc11c\uc2dd", "\uae08\uc561 \ud45c\uc2dc\ub294 \uc5b5\uc6d0\uc785\ub2c8\ub2e4. \ube44\uc728 \ud589\uc740 %\uac00 \uacf1\ud574\uc9c4 \uc22b\uc790\uc785\ub2c8\ub2e4(14.47 = 14.47%)."], ["\uac80\uc99d", "\uac01 \uc2dc\ud2b8\uc758 \uc218\uc2dd\uacfc \ucd9c\ucc98 \uc2dc\ud2b8\ub97c \ud655\uc778\ud558\uc138\uc694. \uc7ac\ubb34\uc694\uc57d \ub9e8 \uc544\ub798 \ub3c5\ub9bd \uac80\uc99d\uc2dd\uc740 0\uc774 \uc815\uc0c1\uc785\ub2c8\ub2e4."], ["EBITDA", "\uc601\uc5c5\uc774\uc775+\uc804\uccb4 \uac10\uac00\uc0c1\uac01\ube44+\ubb34\ud615\uc790\uc0b0\uc0c1\uac01\ube44. \uc8fc\uc11d \uc774\uc775\uac12\uacfc \ub3d9\uc77c\uae30\uac04 \uc7ac\ubb34 API\ub97c \ub300\uc870\ud55c \uacbd\uc6b0\uc5d0\ub9cc \uc0ac\uc6a9\ud569\ub2c8\ub2e4."], ["\uc21c\ubd80\ucc44 \uc8fc\uc758", "\ubd80\ucc44\ucd1d\uacc4\u2212\ud604\uae08 \uc9c0\ud45c\ub294 \uc774\uc790\ubd80\ucc28\uc785\uae08 \uae30\uc900 \uc21c\ucc28\uc785\uae08\uc774 \uc544\ub2d9\ub2c8\ub2e4."], ["\uc21c\ucc28\uc785\uae08", "\ucc28\uc785\uae08\xb7\uc0ac\ucc44\xb7\ub9ac\uc2a4\ubd80\ucc44\u2212\ud604\uae08\ubc0f\ud604\uae08\uc131\uc790\uc0b0. \ub2e8\uae30\uae08\uc735\uc0c1\ud488 \uc81c\uc678. \uc74c\uc218\ub294 \uc21c\ud604\uae08. \uacc4\uc815 \ubc94\uc704\uac00 \ubd88\uba85\ud655\ud558\uba74 \ube48\uce78. \ucd9c\ucc98 \uc2dc\ud2b8\uc5d0\uc11c \uad6c\uc131 \uacc4\uc815\uc744 \ud655\uc778\ud558\uc138\uc694."], ["\uc81c\ud488 \ubd84\ub958", "\ud68c\uc0ac\uac00 \uacf5\uc2dc\ud55c \uc0ac\uc5c5\ubd80\ubb38\xb7\uc81c\ud488\uad70 \uae30\uc900\uc774\uba70 \uac1c\ubcc4 HF\xb7CMP \uc81c\ud488 \ub9e4\ucd9c\uc744 \uc784\uc758\ub85c \ub098\ub204\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4."], ["\ub0b4\uc218\xb7\uc218\ucd9c", "\uacf5\uc2dc\uc758 \ub0b4\uc218\xb7\uc218\ucd9c \uae30\uc900\uc774\uba70 \ud574\uc678 \uc9c0\uc5ed\ub9e4\ucd9c\uacfc \ub2e4\ub985\ub2c8\ub2e4."], ["\ub204\ub77d\uac12", "\uc790\ub8cc \uc5c6\uc74c\uc740 0\uc774 \uc544\ub2d9\ub2c8\ub2e4. \ud53c\uc5f0\uc0b0\uc790\uac00 \uc5c6\uac70\ub098 \ubd84\ubaa8\uac00 0\uc774\uba74 \uacc4\uc0b0\uac12\uc740 \ube48\uce78\uc785\ub2c8\ub2e4."]], t1);
       for (t2 = J.get$iterator$ax(type$.List_dynamic._as(report.$index(0, "notes"))); t2.moveNext$0();)
         t1.push(["\uc8fc\uc758", t2.get$current(t2)]);
       sheet.call$2("\uc77d\ub294\ubc29\ubc95", t1);
@@ -26099,10 +26110,10 @@
     B.Map_FFAXA = new A.ConstantStringMap(B.Object_UyC, [B.Record3_75r, B.Record3_QMb, B.Record3_w4D, B.Record3_AOd, B.Record3_CSU, B.Record3_pMb, B.Record3_j0d, B.Record3_YI3, B.Record3_Cv0, B.Record3_eWu, B.Record3_pBD, B.Record3_qzt], A.findType("ConstantStringMap<String,+(String,List<String>,List<String>)>"));
     B.Map_HAE5k = new A.GeneralConstantMap([8, "\\b", 9, "\\t", 10, "\\n", 11, "\\v", 12, "\\f", 13, "\\r", 34, '\\"', 39, "\\'", 92, "\\\\"], type$.GeneralConstantMap_int_String);
     B.Map_MamFV = new A.GeneralConstantMap([10, "A", 11, "B", 12, "C", 13, "D", 14, "E", 15, "F"], type$.GeneralConstantMap_int_String);
+    B.Object_qM7 = {revenue: 0, cost: 1, gross: 2, sga: 3, operating: 4, margin: 5, depreciation: 6, amortization: 7, ebitda: 8, netIncome: 9, assets: 10, cash: 11, interestBearingDebt: 12, netDebt: 13, liabilities: 14, equity: 15, liabilityRatio: 16, liabilitiesLessCash: 17, liabilitiesLessCashRatio: 18, operatingCash: 19, growth: 20};
+    B.Map_bXhDp = new A.ConstantStringMap(B.Object_qM7, ["\ub9e4\ucd9c\uc561", "\ub9e4\ucd9c\uc6d0\uac00", "\ub9e4\ucd9c\ucd1d\uc774\uc775", "\ud310\ub9e4\ube44\uc640\uad00\ub9ac\ube44", "\uc601\uc5c5\uc774\uc775", "\uc601\uc5c5\uc774\uc775\ub960", "\uac10\uac00\uc0c1\uac01\ube44(\uc8fc\uc11d)", "\ubb34\ud615\uc790\uc0b0\uc0c1\uac01\ube44(\uc8fc\uc11d)", "EBITDA(\uacc4\uc0b0)", "\ub2f9\uae30\uc21c\uc774\uc775", "\uc790\uc0b0\ucd1d\uacc4", "\ud604\uae08\ubc0f\ud604\uae08\uc131\uc790\uc0b0", "\ucd1d\ucc28\uc785\uae08(\uc0ac\ucc44\xb7\ub9ac\uc2a4 \ud3ec\ud568)", "\uc21c\ucc28\uc785\uae08(\ub9ac\uc2a4 \ud3ec\ud568)", "\ubd80\ucc44\ucd1d\uacc4", "\uc790\ubcf8\ucd1d\uacc4", "\ubd80\ucc44\ube44\uc728", "\ubd80\ucc44\ucd1d\uacc4\u2212\ud604\uae08(\ucc38\uace0)", "(\ubd80\ucc44\u2212\ud604\uae08)/\uc790\ubcf8", "\uc601\uc5c5\ud65c\ub3d9\ud604\uae08\ud750\ub984", "\ub9e4\ucd9c \uc99d\uac00\uc728(\uc804\ub144 \ub3d9\uae30)"], type$.ConstantStringMap_String_String);
     B.Object_empty = {};
     B.Map_empty = new A.ConstantStringMap(B.Object_empty, [], A.findType("ConstantStringMap<Symbol0,@>"));
-    B.Object_glH = {revenue: 0, cost: 1, gross: 2, sga: 3, operating: 4, margin: 5, depreciation: 6, amortization: 7, ebitda: 8, netIncome: 9, assets: 10, cash: 11, liabilities: 12, equity: 13, liabilityRatio: 14, liabilitiesLessCash: 15, liabilitiesLessCashRatio: 16, operatingCash: 17, growth: 18};
-    B.Map_umm8v = new A.ConstantStringMap(B.Object_glH, ["\ub9e4\ucd9c\uc561", "\ub9e4\ucd9c\uc6d0\uac00", "\ub9e4\ucd9c\ucd1d\uc774\uc775", "\ud310\ub9e4\ube44\uc640\uad00\ub9ac\ube44", "\uc601\uc5c5\uc774\uc775", "\uc601\uc5c5\uc774\uc775\ub960", "\uac10\uac00\uc0c1\uac01\ube44(\uc8fc\uc11d)", "\ubb34\ud615\uc790\uc0b0\uc0c1\uac01\ube44(\uc8fc\uc11d)", "EBITDA(\uacc4\uc0b0)", "\ub2f9\uae30\uc21c\uc774\uc775", "\uc790\uc0b0\ucd1d\uacc4", "\ud604\uae08\ubc0f\ud604\uae08\uc131\uc790\uc0b0", "\ubd80\ucc44\ucd1d\uacc4", "\uc790\ubcf8\ucd1d\uacc4", "\ubd80\ucc44\ube44\uc728", "\ubd80\ucc44\ucd1d\uacc4\u2212\ud604\uae08(\ucc38\uace0)", "(\ubd80\ucc44\u2212\ud604\uae08)/\uc790\ubcf8", "\uc601\uc5c5\ud65c\ub3d9\ud604\uae08\ud750\ub984", "\ub9e4\ucd9c \uc99d\uac00\uc728(\uc804\ub144 \ub3d9\uae30)"], type$.ConstantStringMap_String_String);
     B.XmlAttributeType_BDu = new A.XmlAttributeType('"', 1, "DOUBLE_QUOTE");
     B.Record2_wb7 = new A._Record_2("", B.XmlAttributeType_BDu);
     B.XmlNodeType_0 = new A.XmlNodeType(0, "ATTRIBUTE");

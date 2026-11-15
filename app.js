@@ -12,12 +12,13 @@ const batchEnabled=()=>typeof window.dartCloudBatch==='function';
 const metrics = {
   revenue:'매출액',cost:'매출원가',gross:'매출총이익',sga:'판매비와관리비',operating:'영업이익',margin:'영업이익률',
   depreciation:'유형자산 감가상각비',amortization:'무형자산 상각비',ebitda:'EBITDA',netIncome:'당기순이익',
-  assets:'자산총계',cash:'현금및현금성자산',liabilities:'부채총계',equity:'자본총계',liabilityRatio:'부채비율',
+  assets:'자산총계',cash:'현금및현금성자산',interestBearingDebt:'총차입금(사채·리스 포함)',netDebt:'순차입금(리스 포함)',liabilities:'부채총계',equity:'자본총계',liabilityRatio:'부채비율',
   liabilitiesLessCash:'부채총계−현금(참고)',liabilitiesLessCashRatio:'(부채−현금)/자본',operatingCash:'영업활동현금흐름',growth:'매출 증가율(전년 동기)'
 };
 const percent = new Set(['margin','liabilityRatio','liabilitiesLessCashRatio','growth']);
-const major = new Set(['revenue','operating','margin','ebitda','netIncome','equity']);
+const major = new Set(['revenue','operating','margin','ebitda','netIncome','equity','netDebt']);
 const formula = {margin:'영업이익 ÷ 매출액 × 100',liabilityRatio:'부채총계 ÷ 자본총계 × 100',
+  netDebt:'총차입금(차입금·사채·리스부채) − 현금및현금성자산',
   liabilitiesLessCash:'부채총계 − 현금및현금성자산',liabilitiesLessCashRatio:'(부채총계 − 현금및현금성자산) ÷ 자본총계 × 100',
   ebitda:'영업이익 + 유형자산 감가상각비 + 무형자산 상각비',growth:'(매출액 − 전년 동기 매출액) ÷ 전년 동기 매출액 × 100'};
 
@@ -353,6 +354,7 @@ function renderFinancial(report,id) {
   actions.append(button('원문 재무표',()=>showCompanyRaw(report.corp_code,report.company).catch(e=>notify(e.message))));
   actions.append(button('☆ 관심·메모',()=>editResearch(report.corp_code,report.company).catch(e=>notify(e.message))));
   bar.append(heading,actions);root.append(bar,el('p','unit-label','금액: 억원 · 비율: % · 숫자를 누르면 원자료와 계산 근거를 확인할 수 있습니다.'));
+  root.append(el('p','scope-note','순차입금은 차입금·사채·리스부채에서 현금및현금성자산을 뺀 값입니다. 음수는 순현금입니다. 구성 항목을 확인하지 못하면 —로 표시하며, 이전 결과는 다시 분석해 주세요.'));
   if(report.quality){
     const q=report.quality,box=el('details','quality-box');box.open=q.needsReview;
     box.append(el('summary','',`자료 확보: 연간 ${q.annualAvailable}/5년 · 제품 매출 ${q.productsPeriods}/5년 · 내수수출 ${q.marketsPeriods}/5년${q.outdated?' · 이전 버전/재분석 필요':''}`));
@@ -394,6 +396,19 @@ function renderFinancial(report,id) {
 function showCalculation(col,metric) {
   const body=dialog(`${col.label} · ${metrics[metric]}`);
   body.append(el('h3','',number(col.values[metric],percent.has(metric))));
+  if(['netDebt','interestBearingDebt'].includes(metric)){
+    const detail=col.netDebtDetail;
+    body.append(el('p','scope-note',detail?.definition||'순차입금 = 차입금·사채·리스부채 − 현금및현금성자산. 단기금융상품은 차감하지 않습니다.'));
+    if(!detail)body.append(el('p','quality-warning','이전 분석에는 차입금 자료가 없습니다. 다시 분석해 주세요.'));
+    else if(detail.reason)body.append(el('p','quality-warning',detail.reason));
+    if(metric==='netDebt'&&col.values.cash==null)body.append(el('p','quality-warning','현금및현금성자산 미입수로 계산할 수 없습니다.'));
+    if(metric==='netDebt'&&col.values.netDebt<0)body.append(el('p','','순현금 상태: 현금및현금성자산이 총차입금보다 많습니다.'));
+    for(const component of detail?.components||[]){
+      const block=el('article','evidence');block.append(el('h3','',component.account_nm),el('pre','raw-values',`${component.value}원 · ${component.currency}\n필드: ${component.field}`));sourceLinks(block,{rcept_no:component.receipt});body.append(block);
+    }
+    if(col.sources?.cash){const c=col.sources.cash;body.append(el('p','',`현금및현금성자산: ${c.value} ${c.currency}`));sourceLinks(body,{rcept_no:c.receipt});}
+    return;
+  }
   body.append(el('p','scope-note',`${col.year}년 · ${col.report==='11011'?'연간':col.label} · ${(col.basis||state.report?.basis)==='CFS'?'연결':'별도'} · ${col.source==='audit'?'감사보고서 재무표 인식':'DART 구조화 재무정보'}`));
   if(col.values[metric]==null){
     const reason=col.status==='013'?'해당 기간·기준의 구조화 재무자료 없음. 원문 감사보고서의 자료 유무는 별도 확인이 필요합니다.':formula[metric]?'계산에 필요한 입력값 누락 또는 분모가 0입니다.':col.source==='audit'?'원문에서 이 항목의 금액을 확인하지 못했습니다. 미공시 또는 표 인식 누락 여부를 원문과 대조하세요.':'응답에서 이 계정의 값을 찾지 못했습니다. 미공시 또는 계정 매칭 실패 여부는 원문 확인이 필요합니다.';
