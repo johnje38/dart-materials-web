@@ -639,6 +639,26 @@ function renderPicks(){
     const remove=button('×',()=>togglePick(c),'pick-remove');remove.setAttribute('aria-label',c.name+' 빼기');
     chip.append(remove);list.append(chip);
   }
+  renderSidePicks(n);
+}
+// The sidebar's empty lower area lists the checked companies, one small line each.
+function renderSidePicks(n){
+  let box=$('side-picks');
+  if(!box){
+    box=el('div','side-picks hidden');box.id='side-picks';box.setAttribute('role','region');box.setAttribute('aria-label','다중분석 선택 회사');
+    const head=el('div','side-picks-head');head.append(el('span','','다중분석 선택'),el('b','side-picks-count','0'));
+    box.append(head,el('ol','side-picks-list'),button('다중분석 →',()=>openSelectedBatch().catch(e=>notify(e.message)),'side-picks-open'));
+    document.querySelector('.sidebar-bottom').before(box);
+  }
+  box.classList.toggle('hidden',!batchEnabled()||!n);
+  box.querySelector('.side-picks-count').textContent=n;
+  const list=box.querySelector('.side-picks-list');list.replaceChildren();
+  for(const c of state.picks.values()){
+    const row=el('li');row.title=c.name;
+    const remove=button('×',()=>togglePick(c),'side-picks-remove');remove.setAttribute('aria-label',c.name+' 빼기');
+    row.append(el('span','',c.name),remove);list.append(row);
+  }
+  list.scrollTop=list.scrollHeight;
 }
 async function openSelectedBatch(){
   if(!state.picks.size){notify('분석할 회사를 체크해 주세요.');return;}
