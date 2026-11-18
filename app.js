@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 // Matches the cloud database limit; the local server still runs one job at a time and says so.
 const MAX_ACTIVE_JOBS=3;
 const state = {config:null, category:'', company:null, search:null, report:null, reportId:null, jobs:[], busy:false, searchRevision:0,financialRevision:0,jobsRevision:0,companyRevision:0,analysisJob:null};
-const labels = {search:'소재·회사 검색', companies:'회사 찾기', financial:'회사 상세 · 재무 분석', batch:'다중 비교', collect:'원문 수집',library:'분석 보관함'};
+const labels = {search:'소재·회사 검색', companies:'회사 찾기', financial:'회사 상세 · 재무 분석', batch:'다중분석', collect:'원문 수집',library:'분석 보관함'};
 state.searchPage=1;state.libraryPage=1;state.libraryRevision=0;state.comparison=new Map();
 // Companies picked for the multi-company financial view (cloud only).
 state.picks=new Map();state.batch=null;state.batchRevision=0;
@@ -38,6 +38,7 @@ function page(name) {
   $('page-label').textContent=labels[name];
   if(name==='library')loadLibrary().catch(e=>notify(e.message));
   renderPicks();
+  renderJobs();
 }
 async function api(path, data, {signal}={}) {
   if(window.dartCloudApi)return window.dartCloudApi(path,data);
@@ -105,6 +106,7 @@ function renderResults(data) {
     const card=companyCard(company.name,company.code,company.stock||'');
     card.classList.add('company-link-card');
     card.addEventListener('click',e=>{if(!e.target.closest('button,a,input,label,select,textarea')&&!window.getSelection()?.toString())analyzeCompany(company).catch(error=>notify(error.message));});
+    if(batchEnabled())card.append(pickCheckbox(company));
     const tags=el('div','tag-row'); company.categories.forEach(c=>tags.append(el('span','tag',c))); card.append(tags);
     if(company.research?.status && company.research.status!=='unreviewed')tags.append(el('span','tag','사용자 검토: '+({confirmed:'제조판매 확인',mention:'언급만 확인',exclude:'제외로 표시'})[company.research.status]));
     // Some matches are only a heading or image caption ("(1) Sputtering Target"): prefer a real
@@ -118,13 +120,13 @@ function renderResults(data) {
     if(company.catalogEvidence||company.evidence.length)footer.append(button('근거 보기 ↗',()=>showEvidence(company),'text-button'));card.append(footer);
     const actions=el('div','card-actions');
     actions.append(button('사업·재무 보기 →',()=>analyzeCompany(company).catch(e=>notify(e.message)),'primary'));
-    if(batchEnabled())actions.append(pickButton({name:company.name,code:company.code,stock:company.stock||''}));
     actions.append(button('재무표 원문',()=>showCompanyRaw(company.code,company.name).catch(e=>notify(e.message))));
     const favorite=button(company.research?.favorite?'★ 즐겨찾기':'☆ 즐겨찾기',()=>{favorite.disabled=true;toggleFavorite(company).catch(e=>notify(e.message)).finally(()=>{favorite.disabled=false;});});
     favorite.setAttribute('aria-pressed',String(!!company.research?.favorite));
     actions.append(favorite,button('조사 메모',()=>editResearch(company.code,company.name).catch(e=>notify(e.message))));
     card.append(actions);list.append(card);
   }
+  renderPicks();
 }
 // Which company this is (KRX industry) and where the excerpt comes from, so an equipment maker
 // or a patent-list mention reads differently from a material maker's product line.
@@ -291,7 +293,7 @@ async function showCompanyRaw(code,name) {
 async function startJob(kind,options) {
   notify('');const job=await api('/api/'+kind,options);
   if(kind==='analyze')state.analysisJob={id:job.id,revision:state.financialRevision};
-  await refreshJobs();$('jobs-panel').scrollIntoView({behavior:'smooth',block:'nearest'});return job;
+  await refreshJobs();if(!$('jobs-panel').classList.contains('hidden'))$('jobs-panel').scrollIntoView({behavior:'smooth',block:'nearest'});return job;
 }
 async function refreshJobs(restore=false) {
   const revision=++state.jobsRevision,financialRevision=state.financialRevision;
@@ -302,8 +304,7 @@ async function refreshJobs(restore=false) {
   const newlyFinished=jobs.filter(j=>j.state==='completed' && (restore || previous.some(old=>old.id===j.id && old.state!=='completed') || pending?.id===j.id));
   const latestFinancial=newlyFinished.find(j=>j.reportId && (!pending || pending.id===j.id));
   if(latestFinancial)await loadReport(latestFinancial.reportId,{automatic:true,revision:pending?.id===latestFinancial.id?pending.revision:financialRevision,allowBasisFallback:latestFinancial.basisFallback});
-  if(latestFinancial?.kind==='analysis' && !restore && state.reportId===latestFinancial.reportId){
-    page('financial');
+  if(latestFinancial?.kind==='analysis' && !restore && state.reportId===latestFinancial.reportId && !$('page-financial').classList.contains('hidden')){
     if(latestFinancial.hasData===false){notify('구조화 재무자료가 없어 수집한 감사보고서의 재무 원문을 표시합니다.');await showCompanyRaw(state.company.code,state.company.name);}
   }
   if(newlyFinished.length)await search(state.searchPage);
@@ -338,11 +339,12 @@ function sinceText(value) {
 }
 function renderJobs() {
   const root=$('jobs');root.replaceChildren();
-  if(!state.jobs.length){root.append(el('p','muted','아직 실행한 작업이 없습니다.'));return;}
-  for(const job of state.jobs) {
+  const jobs=companyActiveJobs(state.jobs,state.company?.code,state.analysisJob,state.financialRevision);
+  $('jobs-panel').classList.toggle('hidden',!jobs.length||$('page-financial').classList.contains('hidden'));
+  for(const job of jobs) {
     const row=el('article','job '+job.state),head=el('div','job-header'),content=el('div');
     const active=['queued','running'].includes(job.state);
-    content.append(el('span','tag',({completed:'완료',error:'오류',cancelled:'중지',interrupted:'중단',running:'진행 중',queued:'대기'})[job.state]),el('span','job-message',job.message));
+    content.append(el('span','tag',({completed:'완료',error:'오류',cancelled:'중지',interrupted:'중단',running:'진행 중',queued:'대기'})[job.state]),el('strong','',state.company?.name||'선택한 회사'),el('span','job-message',' · '+job.message));
     head.append(content);
     if(active)head.append(button('중지',()=>api(`/api/jobs/${job.id}/stop`,{}).then(()=>refreshJobs()).catch(e=>notify(e.message))));
     else if(job.reportId)head.append(button('재무표 열기',()=>loadReport(job.reportId).then(()=>page('financial')).catch(e=>notify(e.message))));
@@ -361,11 +363,15 @@ function renderJobs() {
       }
       const since=sinceText(job.updated);if(since)row.append(el('small','job-since',since));
     }
-    if(job.selected!==undefined)row.append(el('small','',`선택 ${job.selected}건 · 분석 ${job.processed||0}건 · 실패 ${job.failures?.length||0}건`));
+    if(job.selected!==undefined)row.append(el('small','',`공시 원문 처리 ${job.processed||0}/${job.selected}건 · 수집·처리 실패 ${job.failures?.length||0}건`));
     if(job.truncated)row.append(el('p','scope-note','보고서 상한에 도달했습니다. 전체 회사를 조사한 결과가 아닙니다. 기간을 나누어 추가 수집하세요.'));
     if(job.failures?.length){const d=el('details');d.append(el('summary','',`실패한 보고서 ${job.failures.length}건 보기`));job.failures.forEach(f=>d.append(el('p','',`${f.company} · ${f.receipt}\n${f.error}`)));row.append(d);}
     root.append(row);
   }
+}
+function companyActiveJobs(jobs,code,pending,revision){
+  if(!code)return [];
+  return jobs.filter(j=>['queued','running'].includes(j.state)&&((j.params?.code||j.scope?.code||j.code)===code||pending?.id===j.id&&pending.revision===revision));
 }
 async function loadReport(id,options={}) {
   const revision=options.automatic?options.revision:++state.financialRevision;
@@ -380,10 +386,25 @@ async function loadReport(id,options={}) {
   $('basis').value=report.basis;$('last-year').value=report.lastYear;
   $('scan-company').textContent=`선택한 회사: ${report.company} · ${report.corp_code}`;
   renderFinancial(report,id);
+  renderJobs();
 }
 function number(value,isPercent=false) {
   if(value===null||value===undefined||!Number.isFinite(Number(value)))return '—';
   return new Intl.NumberFormat('ko-KR',{maximumFractionDigits:1}).format(isPercent?Number(value):Number(value)/100000000)+(isPercent?'%':'');
+}
+function reportCoverage(report){
+  const core=['revenue','operating','netIncome','assets','liabilities','equity'];
+  const has=v=>v!=null&&Number.isFinite(Number(v));
+  const years=Array.from({length:5},(_,i)=>Number(report.lastYear)-4+i);
+  const periods=years.map(year=>{
+    const col=(report.columns||[]).find(c=>c.year===year&&(c.report||'11011')==='11011');
+    const missing=core.filter(k=>!has(col?.values?.[k]));
+    return {year,available:missing.length<core.length,missing,netDebtMissing:!has(col?.values?.netDebt)};
+  });
+  const quarters=(report.columns||[]).filter(c=>(c.report||'11011')!=='11011'&&core.some(k=>has(c.values?.[k])))
+    .sort((a,b)=>b.year-a.year||({'11013':1,'11012':2,'11014':3}[b.report]||0)-({'11013':1,'11012':2,'11014':3}[a.report]||0));
+  return {periods,available:periods.filter(p=>p.available).map(p=>p.year),complete:periods.filter(p=>!p.missing.length).length,
+    missingYears:periods.filter(p=>!p.available).map(p=>p.year),quarter:quarters[0]?.label||'입수한 분기자료 없음'};
 }
 function renderFinancial(report,id) {
   const root=$('financial-content');root.className='panel';root.replaceChildren();
@@ -395,6 +416,16 @@ function renderFinancial(report,id) {
   actions.append(button('원문 재무표',()=>showCompanyRaw(report.corp_code,report.company).catch(e=>notify(e.message))));
   actions.append(button('☆ 관심·메모',()=>editResearch(report.corp_code,report.company).catch(e=>notify(e.message))));
   bar.append(heading,actions);root.append(bar,el('p','unit-label','금액: 억원 · 비율: % · 숫자를 누르면 원자료와 계산 근거를 확인할 수 있습니다.'));
+  const coverage=reportCoverage(report),summary=el('div','coverage-summary');
+  summary.append(el('p','',`연간 자료가 있는 연도: ${coverage.available.length?coverage.available.join(' · '):'없음'} (${coverage.available.length}/5년)`),
+    el('p','',`주요 6개 항목 모두 확보: ${coverage.complete}/5년 · 최신 분기: ${coverage.quarter}`));
+  if(coverage.missingYears.length)summary.append(el('p','quality-warning',`연간 자료 미입수: ${coverage.missingYears.join(' · ')}`));
+  const missing=coverage.periods.filter(p=>p.missing.length||p.netDebtMissing);
+  if(missing.length){const details=el('details');details.append(el('summary','','미입수 항목 확인'));
+    for(const p of missing)details.append(el('p','scope-note',`${p.year}: ${[...p.missing.map(k=>metrics[k]||k),...(p.netDebtMissing?['순차입금 계산 자료']:[])].join(', ')}`));
+    summary.append(details);
+  }
+  root.append(summary);
   if(report.prepared){const p=report.prepared;root.append(el('p','scope-note',`사전 분석 결과 · 공시 대조 ${p.checkedAt?new Date(p.checkedAt).toLocaleString('ko-KR'):'미확인'} · ${p.state==='retry'?'최근 갱신 실패로 이전 결과 표시':'최근 대조 시점까지 확인한 자료'}`));}
   root.append(el('p','scope-note','순차입금은 차입금·사채·리스부채에서 현금및현금성자산과 단기금융상품을 뺀 값입니다. 순차입금비율은 순차입금÷자본총계×100입니다. 음수는 순현금입니다. 구성 항목 미확인 시 —로 표시합니다. 이전 결과는 다시 분석해 주세요.'));
   if(report.quality){
@@ -571,6 +602,13 @@ function pickButton(company){
   const b=button(pickLabel(company.code),()=>togglePick(company));
   b.dataset.pick=company.code;b.classList.toggle('picked',state.picks.has(company.code));return b;
 }
+function pickCheckbox(company){
+  const label=el('label','inline-check company-select'),check=el('input');check.type='checkbox';
+  check.dataset.pickCheck=company.code;check.checked=state.picks.has(company.code);
+  check.setAttribute('aria-label',company.name+' 다중분석 선택');
+  check.addEventListener('change',()=>{togglePick({name:company.name,code:company.code,stock:company.stock||''});check.checked=state.picks.has(company.code);});
+  label.append(check,document.createTextNode('다중분석 선택'));return label;
+}
 function togglePick(company){
   if(state.picks.has(company.code))state.picks.delete(company.code);
   else if(state.picks.size>=MAX_PICKS){notify(`한 번에 최대 ${MAX_PICKS}곳까지 담을 수 있습니다.`);return;}
@@ -579,8 +617,20 @@ function togglePick(company){
 }
 function renderPicks(){
   const n=state.picks.size;
+  const signature=[...state.picks.keys()].sort().join(',');
+  if(state.batchSelectionSignature!==undefined&&state.batchSelectionSignature!==signature){
+    state.batchRevision++;state.batch=null;
+    $('batch-run').disabled=false;$('batch-run').textContent='5개년 재무 한 번에 조회';
+    $('batch-status').textContent='';const root=$('batch-content');root.className='panel empty';
+    root.replaceChildren(el('h2','','선택한 회사가 변경되었습니다.'),el('p','','다중분석 버튼 또는 위 조회 버튼으로 새 선택의 재무표를 확인하세요.'));
+  }
+  state.batchSelectionSignature=signature;
   $('pick-tray').classList.toggle('hidden',!batchEnabled()||!n||!$('page-batch').classList.contains('hidden'));
-  $('pick-count').textContent=`담은 회사 ${n}곳`;$('batch-count').textContent=n;
+  $('pick-count').textContent=`${n}개 회사 선택`;$('batch-count').textContent=n;
+  $('selection-actions').classList.toggle('hidden',!batchEnabled()||!n);
+  $('selection-count').textContent=`${n}개 회사 선택`;
+  $('selection-analyze').disabled=!n;$('pick-tray-open').disabled=!n;
+  document.querySelectorAll('[data-pick-check]').forEach(c=>{c.checked=state.picks.has(c.dataset.pickCheck);c.closest('.company-card')?.classList.toggle('selected',c.checked);});
   document.querySelectorAll('[data-pick]').forEach(b=>{b.textContent=pickLabel(b.dataset.pick);b.classList.toggle('picked',state.picks.has(b.dataset.pick));});
   const list=$('batch-picks');list.replaceChildren();
   if(!n)list.append(el('p','muted','아직 담은 회사가 없습니다.'));
@@ -590,9 +640,13 @@ function renderPicks(){
     chip.append(remove);list.append(chip);
   }
 }
+async function openSelectedBatch(){
+  if(!state.picks.size){notify('분석할 회사를 체크해 주세요.');return;}
+  page('batch');window.scrollTo(0,0);await runBatch();
+}
 async function pickAllResults(){
   const params=p=>new URLSearchParams({q:$('query').value.trim(),category:state.category,page:p,sort:$('search-sort').value,size:MAX_PICKS,favorites:$('search-favorites')?.checked?'1':'0'});
-  const trigger=$('pick-all'),label=trigger.textContent;trigger.disabled=true;trigger.textContent='담는 중…';
+  const trigger=$('pick-all'),label=trigger.textContent;trigger.disabled=true;trigger.textContent='선택 중…';
   let added=0,skipped=0;
   try{for(let p=1;;p++){
     const data=await api('/api/discover?'+params(p));
@@ -605,7 +659,7 @@ async function pickAllResults(){
     if(state.picks.size>=MAX_PICKS){skipped+=Math.max(0,data.companyCount-p*data.companies.length);break;}
   }}finally{trigger.disabled=false;trigger.textContent=label;}
   renderPicks();
-  notify(`${added}곳을 담았습니다.`+(skipped?` 최대 ${MAX_PICKS}곳까지만 담을 수 있어 ${skipped}곳은 제외했습니다.`:''));
+  notify(`${added}개 회사를 선택했습니다.`+(skipped?` 최대 ${MAX_PICKS}개까지 선택할 수 있어 ${skipped}개는 제외했습니다.`:''));
 }
 async function runBatch(){
   if(!state.picks.size){notify('먼저 회사를 담아주세요.');return;}
@@ -622,7 +676,7 @@ async function runBatch(){
     if(revision!==state.batchRevision)return;
     state.batch={data,options};renderBatch();
     const missing=data.companies.filter(c=>!c.found).length;
-    if(!data.asOf){$('batch-status').textContent='담은 회사 모두 미리 수집한 재무가 없습니다(비상장사 등 DART 구조화 재무 미제공). 회사 찾기에서 ‘선택하고 자동 분석’으로 감사보고서 원문을 분석하세요.';return;}
+    if(!data.asOf){$('batch-status').textContent='선택한 회사들의 핵심 재무 비교 자료가 없습니다. 개별 회사의 사업·재무 보기에서 저장된 결과를 확인하거나 분석을 요청하세요.';return;}
     $('batch-status').textContent=`${data.companies.length}곳 조회 완료 · ${((performance.now()-started)/1000).toFixed(1)}초 · DART 데이터 수집일 ${new Date(data.asOf).toLocaleDateString('ko-KR')}`+(missing?` · 자료 없음 ${missing}곳(비상장사 등)`:'');
   }catch(error){
     if(revision===state.batchRevision){
@@ -689,8 +743,8 @@ $('financial-form').addEventListener('submit',e=>{e.preventDefault();if(!state.c
   startJob('analyze',{code:state.company.code,basis:$('basis').value,year:Number($('last-year').value)}).catch(error=>notify(error.message));});
 for(const id of ['basis','last-year'])$(id).addEventListener('change',()=>{state.financialRevision++;state.report=null;state.reportId=null;$('financial-content').className='panel empty';$('financial-content').replaceChildren(el('h2','','조회 조건이 변경되었습니다.'),el('p','','실제 재무 조회를 눌러 새 조건의 표를 불러오세요.'));});
 $('pick-all').addEventListener('click',()=>pickAllResults().catch(e=>notify(e.message)));
-for(const id of ['batch-clear','pick-tray-clear'])$(id).addEventListener('click',()=>{state.picks.clear();renderPicks();});
-$('pick-tray-open').addEventListener('click',()=>page('batch'));
+for(const id of ['batch-clear','pick-tray-clear','selection-clear'])$(id).addEventListener('click',()=>{state.picks.clear();renderPicks();});
+for(const id of ['pick-tray-open','selection-analyze'])$(id).addEventListener('click',()=>openSelectedBatch().catch(e=>notify(e.message)));
 $('batch-form').addEventListener('submit',e=>{e.preventDefault();runBatch().catch(error=>notify(error.message));});
 $('refresh-jobs').addEventListener('click',()=>refreshJobs().catch(e=>notify(e.message)));
 $('close-dialog').addEventListener('click',()=>$('detail-dialog').close());
