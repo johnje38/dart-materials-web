@@ -36,6 +36,7 @@ function page(name) {
   document.querySelectorAll('.page').forEach(n=>n.classList.toggle('hidden',n.id!==`page-${name}`));
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
   notify();// A message about the previous page does not belong on the next one.
+  pinMenu();
   $('page-label').textContent=labels[name];
   if(name==='library')loadLibrary().catch(e=>notify(e.message));
   renderPicks();
@@ -55,7 +56,7 @@ async function api(path, data, {signal}={}) {
 function showLogin() {$('app').classList.add('hidden'); $('login-screen').classList.remove('hidden');}
 async function initialize() {
   state.config=await api('/api/config');
-  $('login-screen').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('login-screen').classList.add('hidden'); $('app').classList.remove('hidden');pinMenu();
   $('stat-companies').textContent=state.config.indexedCompanies.toLocaleString();
   $('stat-reports').textContent=state.config.indexedReports.toLocaleString();
   $('stat-categories').textContent=Object.keys(state.config.categories).length;
@@ -156,7 +157,8 @@ function termPattern(terms) {
 function readable(text) {
   text=String(text||'');
   if(text.includes('|'))text=text.split(/\s*\|\s*|\n+/).map(c=>c.trim()).filter(c=>c&&!/^[-−△()\d.,%\s]*$/.test(c)).join(' · ');
-  return text.replace(/[^\s\]\[|]+\.(?:jpe?g|png|gif|bmp)\b/gi,'').replace(/([가-힣][.!?])(?=[A-Za-z가-힣(])/g,'$1 ').replace(/\s+/g,' ').trim();
+  // Stored filings ran cell lines together ("CMP PADWet Chemical"); split a capitals run from a following word.
+  return text.replace(/([A-Z]{2,})(?=[A-Z][a-z]{2,})/g,'$1 ').replace(/[^\s\]\[|]+\.(?:jpe?g|png|gif|bmp)\b/gi,'').replace(/([가-힣][.!?])(?=[A-Za-z가-힣(])/g,'$1 ').replace(/\s+/g,' ').trim();
 }
 // The sentence (or table cell) holding the first match, with the match in bold. Starts and ends at
 // sentence boundaries when one is near, so the card reads as whole sentences; "…" marks a real cut.
@@ -772,6 +774,11 @@ for(const id of ['basis','last-year'])$(id).addEventListener('change',()=>{state
 $('pick-all').addEventListener('click',()=>pickAllResults().catch(e=>notify(e.message)));
 for(const id of ['batch-clear','pick-tray-clear','selection-clear'])$(id).addEventListener('click',()=>{state.picks.clear();renderPicks();});
 $('notice').addEventListener('click',()=>notify());
+// On phones the menu row stays pinned while the logo above it scrolls away; measure the logo
+// instead of assuming its height, which differs with the phone's fonts.
+// While the app is still hidden behind the sign-in screen the height reads 0; page() measures again.
+function pinMenu(){const nav=document.querySelector('.sidebar nav');if(nav?.offsetTop)document.querySelector('.sidebar').style.setProperty('--menu-offset',nav.offsetTop+'px');}
+pinMenu();window.addEventListener('resize',pinMenu);document.fonts?.ready.then(pinMenu);
 for(const id of ['pick-tray-open','selection-analyze'])$(id).addEventListener('click',()=>openSelectedBatch().catch(e=>notify(e.message)));
 $('batch-form').addEventListener('submit',e=>{e.preventDefault();runBatch().catch(error=>notify(error.message));});
 $('refresh-jobs').addEventListener('click',()=>refreshJobs().catch(e=>notify(e.message)));
