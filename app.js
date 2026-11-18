@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 // Matches the cloud database limit; the local server still runs one job at a time and says so.
 const MAX_ACTIVE_JOBS=3;
 const state = {config:null, category:'', company:null, search:null, report:null, reportId:null, jobs:[], busy:false, searchRevision:0,financialRevision:0,jobsRevision:0,companyRevision:0,analysisJob:null};
-const labels = {search:'소재 검색', companies:'회사 찾기', financial:'재무 분석', batch:'다중 비교', collect:'원문 수집',library:'분석 보관함'};
+const labels = {search:'소재·회사 검색', companies:'회사 찾기', financial:'회사 상세 · 재무 분석', batch:'다중 비교', collect:'원문 수집',library:'분석 보관함'};
 state.searchPage=1;state.libraryPage=1;state.libraryRevision=0;state.comparison=new Map();
 // Companies picked for the multi-company financial view (cloud only).
 state.picks=new Map();state.batch=null;state.batchRevision=0;
@@ -12,13 +12,14 @@ const batchEnabled=()=>typeof window.dartCloudBatch==='function';
 const metrics = {
   revenue:'매출액',cost:'매출원가',gross:'매출총이익',sga:'판매비와관리비',operating:'영업이익',margin:'영업이익률',
   depreciation:'유형자산 감가상각비',amortization:'무형자산 상각비',ebitda:'EBITDA',netIncome:'당기순이익',
-  assets:'자산총계',cash:'현금및현금성자산',interestBearingDebt:'총차입금(사채·리스 포함)',netDebt:'순차입금(리스 포함)',liabilities:'부채총계',equity:'자본총계',liabilityRatio:'부채비율',
+  assets:'자산총계',cash:'현금및현금성자산',shortTermBorrowings:'단기차입금',currentLongTermBorrowings:'유동성장기차입금',longTermBorrowings:'장기차입금',shortTermInvestments:'단기금융상품',interestBearingDebt:'총차입금(사채·리스 포함)',netDebt:'순차입금(리스 포함)',netDebtRatio:'순차입금비율',liabilities:'부채총계',equity:'자본총계',liabilityRatio:'부채비율',
   liabilitiesLessCash:'부채총계−현금(참고)',liabilitiesLessCashRatio:'(부채−현금)/자본',operatingCash:'영업활동현금흐름',growth:'매출 증가율(전년 동기)'
 };
-const percent = new Set(['margin','liabilityRatio','liabilitiesLessCashRatio','growth']);
+const percent = new Set(['margin','liabilityRatio','liabilitiesLessCashRatio','growth','netDebtRatio']);
 const major = new Set(['revenue','operating','margin','ebitda','netIncome','equity','netDebt']);
 const formula = {margin:'영업이익 ÷ 매출액 × 100',liabilityRatio:'부채총계 ÷ 자본총계 × 100',
-  netDebt:'총차입금(차입금·사채·리스부채) − 현금및현금성자산',
+  netDebt:'총차입금(차입금·사채·리스부채) − 현금및현금성자산 − 단기금융상품',
+  netDebtRatio:'순차입금 ÷ 자본총계 × 100',
   liabilitiesLessCash:'부채총계 − 현금및현금성자산',liabilitiesLessCashRatio:'(부채총계 − 현금및현금성자산) ÷ 자본총계 × 100',
   ebitda:'영업이익 + 유형자산 감가상각비 + 무형자산 상각비',growth:'(매출액 − 전년 동기 매출액) ÷ 전년 동기 매출액 × 100'};
 
@@ -30,6 +31,7 @@ function button(text, onClick, className='outline') {
 }
 function notify(message='') {$('notice').textContent=message; $('notice').classList.toggle('hidden',!message);}
 function page(name) {
+  if(name==='companies')name='search';
   if(!labels[name])return;
   document.querySelectorAll('.page').forEach(n=>n.classList.toggle('hidden',n.id!==`page-${name}`));
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
@@ -76,7 +78,7 @@ function renderCategories() {
 }
 async function search(requestedPage=1) {
   const revision=++state.searchRevision;
-  const params=new URLSearchParams({q:$('query').value.trim(),category:state.category,page:requestedPage,sort:$('search-sort').value});
+  const params=new URLSearchParams({q:$('query').value.trim(),category:state.category,page:requestedPage,sort:$('search-sort').value,favorites:$('search-favorites')?.checked?'1':'0'});
   $('search-scope').textContent='공식 회사·제품 목록에서 검색 중…';
   const data=await api('/api/discover?'+params);
   if(revision!==state.searchRevision)return;
@@ -96,34 +98,38 @@ function renderResults(data) {
     card.append(el('p','eyebrow',data.scope.indexedReports?'NO MATCHES IN COLLECTED REPORTS':'YOUR LIBRARY STARTS HERE'));
     card.append(el('h2','',data.warning?'회사 목록 일부를 불러오지 못했습니다.':'일치하는 회사 후보를 찾지 못했습니다.'));
     card.append(el('p','','다른 제품명·영문명으로 검색하거나 회사명 찾기를 이용하세요. 목록에 없는 사업이 없다는 뜻은 아닙니다.'));
-    card.append(button('솔브레인으로 실제 조회 →',()=>{page('companies');$('company-query').value='솔브레인'; lookupCompanies().catch(e=>notify(e.message));}));
+    card.append(button('솔브레인 검색 →',()=>{$('query').value='솔브레인';state.category='';renderCategories();search().catch(e=>notify(e.message));}));
     list.append(card);return;
   }
   for(const company of data.companies) {
-    const card=companyCard(company.name,company.code);
+    const card=companyCard(company.name,company.code,company.stock||'');
+    card.classList.add('company-link-card');
+    card.addEventListener('click',e=>{if(!e.target.closest('button,a,input,label,select,textarea')&&!window.getSelection()?.toString())analyzeCompany(company).catch(error=>notify(error.message));});
     const tags=el('div','tag-row'); company.categories.forEach(c=>tags.append(el('span','tag',c))); card.append(tags);
     if(company.research?.status && company.research.status!=='unreviewed')tags.append(el('span','tag','사용자 검토: '+({confirmed:'제조판매 확인',mention:'언급만 확인',exclude:'제외로 표시'})[company.research.status]));
     // Some matches are only a heading or image caption ("(1) Sputtering Target"): prefer a real
     // paragraph, else show the short ones together.
     const first=company.evidence.find(e=>readable(e.text).length>=40),shorts=company.evidence.slice(0,4);
-    const text=company.catalogEvidence?.products || first?.text || [...new Set(shorts.map(e=>readable(e.text)).filter(Boolean))].join(' · ');
+    const text=company.catalogEvidence?.products || first?.text || [...new Set(shorts.map(e=>readable(e.text)).filter(Boolean))].join(' · ') || '회사명·종목코드로 찾은 회사입니다. 사업·재무 보기에서 사업내용과 재무자료를 확인하세요.';
     const words=company.catalogEvidence?.matchedWords || first?.words || [...new Set(shorts.flatMap(e=>e.words||[]))];
     card.append(meta(company,company.catalogEvidence?null:first||shorts[0]));
     card.append(excerpt(text,words));
-    const footer=el('div','card-footer');footer.append(el('span','',company.catalogEvidence?`KRX 주요제품 후보 · 저장 공시 ${company.reportCount}건`:`공시 근거 ${company.evidenceCount}개 · 보고서 ${company.reportCount}건`));
-    footer.append(button('근거 보기 ↗',()=>showEvidence(company),'text-button'));card.append(footer);
+    const footer=el('div','card-footer');footer.append(el('span','',company.catalogEvidence?`KRX 주요제품 후보 · 저장 공시 ${company.reportCount}건`:company.directoryMatch?'DART 공식 회사명·종목코드 일치':`공시 근거 ${company.evidenceCount}개 · 보고서 ${company.reportCount}건`));
+    if(company.catalogEvidence||company.evidence.length)footer.append(button('근거 보기 ↗',()=>showEvidence(company),'text-button'));card.append(footer);
     const actions=el('div','card-actions');
-    actions.append(button('선택하고 자동 분석 →',()=>analyzeCompany({name:company.name,code:company.code}).catch(e=>notify(e.message)),'primary'));
+    actions.append(button('사업·재무 보기 →',()=>analyzeCompany(company).catch(e=>notify(e.message)),'primary'));
     if(batchEnabled())actions.append(pickButton({name:company.name,code:company.code,stock:company.stock||''}));
     actions.append(button('재무표 원문',()=>showCompanyRaw(company.code,company.name).catch(e=>notify(e.message))));
-    actions.append(button(company.research?.favorite?'★ 관심·메모':'☆ 관심·메모',()=>editResearch(company.code,company.name).catch(e=>notify(e.message))));
+    const favorite=button(company.research?.favorite?'★ 즐겨찾기':'☆ 즐겨찾기',()=>{favorite.disabled=true;toggleFavorite(company).catch(e=>notify(e.message)).finally(()=>{favorite.disabled=false;});});
+    favorite.setAttribute('aria-pressed',String(!!company.research?.favorite));
+    actions.append(favorite,button('조사 메모',()=>editResearch(company.code,company.name).catch(e=>notify(e.message))));
     card.append(actions);list.append(card);
   }
 }
 // Which company this is (KRX industry) and where the excerpt comes from, so an equipment maker
 // or a patent-list mention reads differently from a material maker's product line.
 function meta(company,evidence) {
-  const where=!evidence?'KRX 주요제품':evidence.core===true?'사업보고서 '+(evidence.section||'사업의 내용').replace(/^\d+\.\s*/,''):
+  const where=!evidence?(company.catalogEvidence?'KRX 주요제품':'DART 공식 회사 목록'):evidence.core===true?'사업보고서 '+(evidence.section||'사업의 내용').replace(/^\d+\.\s*/,''):
     evidence.core===false?'사업보고서 연구개발·기타 참고사항':'저장한 공시 원문';
   const node=el('p','card-meta');
   if(company.industry){
@@ -206,10 +212,44 @@ function selectCompany(company) {
   $('financial-title').textContent=`${company.name} · 재무 분석`;
   $('financial-content').replaceChildren(el('h2','',`${company.name}의 재무정보를 조회할 수 있습니다.`),el('p','',"기준과 마지막 사업연도를 확인하면 공시 수집부터 재무 분석까지 이어집니다."));
   $('financial-content').className='panel empty';page('financial');
+  loadCompanyBusiness(company,state.financialRevision);
 }
-async function analyzeCompany(company) {
-  if(state.busy){notify(`분석은 동시에 ${MAX_ACTIVE_JOBS}개까지 실행할 수 있습니다. 하나가 끝나거나 중지한 뒤 다시 시도하세요.`);return;}
+async function loadCompanyBusiness(company,revision){
+  const root=$('company-business');if(!root)return;
+  root.classList.remove('hidden');root.replaceChildren(el('h2','',company.name+' · 주된 사업내용'));
+  if(company.catalogEvidence?.products)root.append(el('p','',company.catalogEvidence.products));
+  try{
+    const data=await api('/api/company-profile?'+new URLSearchParams({code:company.code}));
+    if(revision!==state.financialRevision)return;
+    root.replaceChildren(el('h2','',company.name+' · 주된 사업내용'));
+    if(data.listing){root.append(el('p','scope-note',`업종: ${data.listing.industry||'미확인'} · 종목코드 ${data.listing.stock||company.stock||'없음'}`),el('p','',data.listing.products||'주요제품 정보 없음'),el('p','scope-note','출처: KRX 주요제품 목록'));
+    }
+    const blocks=(data.report?.blocks||[]).filter(b=>b.core).slice(0,3);
+    if(blocks.length){root.append(el('h3','section-heading','사업보고서의 사업·제품 설명'));
+      for(const b of blocks){const d=el('details','evidence');d.append(el('summary','',b.section||'주요 사업·제품'),el('pre','raw-values',b.text));root.append(d);}
+      root.append(el('p','scope-note',data.report.report_name||'사업보고서'));
+      if(/^\d{14}$/.test(data.report.receipt)){const a=el('a','text-button','DART 사업보고서 원문 ↗');a.href=`https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${data.report.receipt}`;a.target='_blank';a.rel='noopener noreferrer';root.append(a);}
+    }else root.append(el('p','scope-note','저장된 사업보고서의 주요 사업 설명이 없습니다. 미입수는 사업이 없다는 뜻이 아닙니다.'));
+    if(data.warning)root.append(el('p','quality-warning',data.warning));
+  }catch(error){if(revision===state.financialRevision)root.append(el('p','quality-warning','사업내용 추가 조회 실패: '+error.message));}
+}
+async function toggleFavorite(company){
+  const previous=await api('/api/research/'+company.code);
+  await api('/api/research/'+company.code,{name:company.name,favorite:!previous.favorite,status:previous.status||'unreviewed',note:previous.note||''});
+  await search(state.searchPage);
+}
+async function analyzeCompany(company,{force=false}={}) {
   selectCompany(company);
+  const revision=state.financialRevision;
+  if(window.dartCloudApi&&!force){
+    $('financial-content').replaceChildren(el('h2','',`${company.name} · 저장된 결과 확인 중`));
+    const {cached}=await api('/api/prepared?'+new URLSearchParams({code:company.code,basis:$('basis').value,year:$('last-year').value}));
+    if(revision!==state.financialRevision)return;
+    if(cached){await loadReport(cached.id,{automatic:true,revision,allowBasisFallback:true,preloaded:cached.report});notify('저장된 분석 결과를 불러왔습니다. 자료 기준일을 확인하세요. 새로 분석하려면 공시 수집·재무 분석 버튼을 누르세요.');return;}
+    $('financial-content').replaceChildren(el('h2','','아직 준비된 재무분석이 없습니다.'),el('p','','위에서 주요 사업내용을 확인할 수 있습니다. 재무자료가 필요하면 공시 수집·재무 분석 버튼을 눌러주세요. 사전 분석 결과는 순차적으로 준비됩니다.'));
+    return;
+  }
+  if(state.busy){$('financial-content').replaceChildren(el('p','','저장된 결과가 없고 다른 분석이 진행 중입니다. 잠시 후 다시 시도하세요.'));notify(`분석은 동시에 ${MAX_ACTIVE_JOBS}개까지 실행할 수 있습니다. 하나가 끝나거나 중지한 뒤 다시 시도하세요.`);return;}
   $('financial-content').replaceChildren(el('h2','',`${company.name} · 공시 원문 수집 중`),el('p','','사업보고서 또는 감사보고서를 모은 뒤 5개년 재무·제품 매출 분석을 자동으로 시작합니다. 아래 진행 상태를 확인하세요.'));
   try{await startJob('analyze',{code:company.code,basis:$('basis').value,year:Number($('last-year').value)});}
   catch(error){$('financial-content').replaceChildren(el('h2','','분석을 시작하지 못했습니다.'),el('p','',error.message));throw error;}
@@ -329,11 +369,12 @@ function renderJobs() {
 }
 async function loadReport(id,options={}) {
   const revision=options.automatic?options.revision:++state.financialRevision;
-  const report=await api('/api/reports/'+id);
+  const report=options.preloaded||await api('/api/reports/'+id);
   if(revision!==state.financialRevision)return;
   const basisMatches=$('basis').value===report.basis || (options.allowBasisFallback && $('basis').value==='CFS' && report.basis==='OFS');
   if(options.automatic && state.company && (state.company.code!==report.corp_code || !basisMatches || Number($('last-year').value)!==report.lastYear))return;
   state.report=report;state.reportId=id;state.company={name:report.company,code:report.corp_code};
+  if(!options.automatic)loadCompanyBusiness(state.company,revision);
   $('selected-company').value=`${report.company} (${report.corp_code})`;
   $('financial-title').textContent=report.company+' · 재무 분석';
   $('basis').value=report.basis;$('last-year').value=report.lastYear;
@@ -354,7 +395,8 @@ function renderFinancial(report,id) {
   actions.append(button('원문 재무표',()=>showCompanyRaw(report.corp_code,report.company).catch(e=>notify(e.message))));
   actions.append(button('☆ 관심·메모',()=>editResearch(report.corp_code,report.company).catch(e=>notify(e.message))));
   bar.append(heading,actions);root.append(bar,el('p','unit-label','금액: 억원 · 비율: % · 숫자를 누르면 원자료와 계산 근거를 확인할 수 있습니다.'));
-  root.append(el('p','scope-note','순차입금은 차입금·사채·리스부채에서 현금및현금성자산을 뺀 값입니다. 음수는 순현금입니다. 구성 항목을 확인하지 못하면 —로 표시하며, 이전 결과는 다시 분석해 주세요.'));
+  if(report.prepared){const p=report.prepared;root.append(el('p','scope-note',`사전 분석 결과 · 공시 대조 ${p.checkedAt?new Date(p.checkedAt).toLocaleString('ko-KR'):'미확인'} · ${p.state==='retry'?'최근 갱신 실패로 이전 결과 표시':'최근 대조 시점까지 확인한 자료'}`));}
+  root.append(el('p','scope-note','순차입금은 차입금·사채·리스부채에서 현금및현금성자산과 단기금융상품을 뺀 값입니다. 순차입금비율은 순차입금÷자본총계×100입니다. 음수는 순현금입니다. 구성 항목 미확인 시 —로 표시합니다. 이전 결과는 다시 분석해 주세요.'));
   if(report.quality){
     const q=report.quality,box=el('details','quality-box');box.open=q.needsReview;
     box.append(el('summary','',`자료 확보: 연간 ${q.annualAvailable}/5년 · 제품 매출 ${q.productsPeriods}/5년 · 내수수출 ${q.marketsPeriods}/5년${q.outdated?' · 이전 버전/재분석 필요':''}`));
@@ -396,17 +438,23 @@ function renderFinancial(report,id) {
 function showCalculation(col,metric) {
   const body=dialog(`${col.label} · ${metrics[metric]}`);
   body.append(el('h3','',number(col.values[metric],percent.has(metric))));
-  if(['netDebt','interestBearingDebt'].includes(metric)){
+  if(col.source==='audit')body.append(el('p','scope-note',`감사보고서 보완 · ${col.auditPeriod==='prior'?'다음 연도 감사보고서의 전기 비교금액':'해당 연도 당기금액'} · 접수번호 ${col.auditReceipt||col.receipt||'미보관'}`));
+  if(['netDebt','netDebtRatio','interestBearingDebt'].includes(metric)){
+    const netMetric=metric!=='interestBearingDebt';
     const detail=col.netDebtDetail;
-    body.append(el('p','scope-note',detail?.definition||'순차입금 = 차입금·사채·리스부채 − 현금및현금성자산. 단기금융상품은 차감하지 않습니다.'));
+    body.append(el('p','scope-note',formula.netDebt+' · 순차입금비율 = '+formula.netDebtRatio));
     if(!detail)body.append(el('p','quality-warning','이전 분석에는 차입금 자료가 없습니다. 다시 분석해 주세요.'));
     else if(detail.reason)body.append(el('p','quality-warning',detail.reason));
-    if(metric==='netDebt'&&col.values.cash==null)body.append(el('p','quality-warning','현금및현금성자산 미입수로 계산할 수 없습니다.'));
-    if(metric==='netDebt'&&col.values.netDebt<0)body.append(el('p','','순현금 상태: 현금및현금성자산이 총차입금보다 많습니다.'));
+    if(netMetric&&col.values.cash==null)body.append(el('p','quality-warning','현금및현금성자산 미입수로 계산할 수 없습니다.'));
+    if(netMetric&&col.values.shortTermInvestments==null)body.append(el('p','quality-warning','단기금융상품 미입수로 계산할 수 없습니다. 계정이 없다는 이유로 0을 넣지 않습니다.'));
+    if(metric==='netDebtRatio'&&(col.values.equity==null||col.values.equity===0))body.append(el('p','quality-warning','자본총계 미입수 또는 0으로 비율을 계산할 수 없습니다.'));
+    if(netMetric&&col.values.netDebt<0)body.append(el('p','','순현금 상태: 현금및현금성자산과 단기금융상품이 총차입금보다 많습니다.'));
     for(const component of detail?.components||[]){
       renderMetricSource(body,col,component.account_nm,component);
     }
-    if(metric==='netDebt'&&col.sources?.cash)renderMetricSource(body,col,'cash',col.sources.cash);
+    if(netMetric){
+      for(const key of ['cash','shortTermInvestments',...(metric==='netDebtRatio'?['equity']:[])])if(col.sources?.[key])renderMetricSource(body,col,key,col.sources[key]);
+    }
     return;
   }
   body.append(el('p','scope-note',`${col.year}년 · ${col.report==='11011'?'연간':col.label} · ${(col.basis||state.report?.basis)==='CFS'?'연결':'별도'} · ${col.source==='audit'?'감사보고서 재무표 인식':'DART 구조화 재무정보'}`));
@@ -503,7 +551,7 @@ async function loadLibrary(requestedPage=1) {
       label.append(check,document.createTextNode(' 비교 선택'));card.append(label);}
     const actions=el('div','card-actions');
     if(item.id)actions.append(button('저장된 결과 열기',()=>loadReport(item.id).then(()=>page('financial')).catch(e=>notify(e.message)),'primary'));
-    actions.append(button('다시 분석',()=>{if(item.year)$('last-year').value=item.year;if(item.basis)$('basis').value=item.basis;analyzeCompany({code:item.code,name:item.name}).catch(e=>notify(e.message));}));
+    actions.append(button('다시 분석',()=>{if(item.year)$('last-year').value=item.year;if(item.basis)$('basis').value=item.basis;analyzeCompany({code:item.code,name:item.name},{force:true}).catch(e=>notify(e.message));}));
     actions.append(button(research.favorite?'★ 관심·메모':'☆ 관심·메모',()=>editResearch(item.code,item.name).catch(e=>notify(e.message))));
     card.append(actions);root.append(card);
   }
@@ -543,7 +591,7 @@ function renderPicks(){
   }
 }
 async function pickAllResults(){
-  const params=p=>new URLSearchParams({q:$('query').value.trim(),category:state.category,page:p,sort:$('search-sort').value,size:MAX_PICKS});
+  const params=p=>new URLSearchParams({q:$('query').value.trim(),category:state.category,page:p,sort:$('search-sort').value,size:MAX_PICKS,favorites:$('search-favorites')?.checked?'1':'0'});
   const trigger=$('pick-all'),label=trigger.textContent;trigger.disabled=true;trigger.textContent='담는 중…';
   let added=0,skipped=0;
   try{for(let p=1;;p++){
@@ -629,6 +677,7 @@ $('login-form').addEventListener('submit',async e=>{e.preventDefault();$('login-
 $('logout').addEventListener('click',()=>api('/api/logout',{}).then(()=>{showLogin();state.jobs=[];state.report=null;state.reportId=null;}).catch(e=>notify(e.message)));
 $('search-form').addEventListener('submit',e=>{e.preventDefault();search().catch(error=>notify(error.message));});
 $('search-sort').addEventListener('change',()=>search().catch(e=>notify(e.message)));
+$('search-favorites')?.addEventListener('change',()=>{if($('search-favorites').checked){$('query').value='';state.category='';renderCategories();}search().catch(e=>notify(e.message));});
 $('library-form').addEventListener('submit',e=>{e.preventDefault();loadLibrary().catch(error=>notify(error.message));});
 $('favorites-only').addEventListener('change',()=>loadLibrary().catch(e=>notify(e.message)));
 $('compare-selected').addEventListener('click',()=>compareSelected().catch(e=>notify(e.message)));

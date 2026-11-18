@@ -18,8 +18,7 @@
       <a class="brand" href="./" aria-label="소재 탐색 홈"><span class="brand-mark">M</span><span>소재 탐색<small>DART RESEARCH</small></span></a>
       <p class="nav-label">WORKSPACE</p>
       <nav aria-label="주 메뉴">
-        <button class="nav active" data-page="search"><span>⌕</span> 소재 검색</button>
-        <button class="nav" data-page="companies"><span>▦</span> 회사 찾기</button>
+        <button class="nav active" data-page="search"><span>⌕</span> 소재·회사 검색</button>
         <button class="nav" data-page="financial"><span>▤</span> 재무 분석</button>
         <button class="nav hidden" data-page="batch" id="nav-batch"><span>▥</span> 다중 비교</button>
         <button class="nav" data-page="library"><span>☆</span> 분석 보관함</button>
@@ -32,13 +31,14 @@
       <div id="notice" class="notice hidden" role="alert"></div>
       <div class="workspace">
         <section id="page-search" class="page">
-          <div class="page-heading"><div><p class="eyebrow">MATERIALS EXPLORER</p><h1>소재에서 기업으로.</h1><p class="muted">키워드로 회사를 찾고 선택하면, 공시 수집부터 재무 분석까지 자동으로 이어집니다.</p></div></div>
-          <ol class="workflow"><li>1. 키워드 검색</li><li>2. 회사 선택</li><li>3. 공시 원문 수집</li><li>4. 재무 분석</li></ol>
+          <div class="page-heading"><div><p class="eyebrow">MATERIALS EXPLORER</p><h1>소재와 회사, 한 번에.</h1><p class="muted">소재·제품명, 회사명 또는 종목코드로 찾고 회사 카드에서 사업내용과 재무분석을 확인하세요.</p></div></div>
+          <ol class="workflow"><li>1. 소재·회사 검색</li><li>2. 회사 카드 선택</li><li>3. 주된 사업내용 확인</li><li>4. 준비된 재무분석 보기</li></ol>
           <div class="stats"><article><span>제품 목록 검색 대상</span><strong id="stat-companies">0</strong><small>KRX 공식 상장법인 목록</small></article><article><span>분석한 보고서</span><strong id="stat-reports">0</strong><small>서버에 저장된 전체 원문</small></article><article><span>소재 분류</span><strong id="stat-categories">6</strong><small>공시 근거 기반 키워드</small></article></div>
-          <form id="search-form" class="search-box"><label class="sr-only" for="query">소재·제품 검색어</label><span class="search-icon">⌕</span><input id="query" placeholder="소재·제품 검색 — 예: 반도체, 불화수소, 포토레지스트" maxlength="100"><button type="submit" class="primary">관련 회사 찾기</button></form>
+          <form id="search-form" class="search-box"><label class="sr-only" for="query">소재·회사명·종목코드</label><span class="search-icon">⌕</span><input id="query" placeholder="소재·회사명·종목코드 — 예: 불화수소, 솔브레인, 357780" maxlength="100"><button type="submit" class="primary">회사 찾기</button></form>
+          <div class="list-controls"><label class="inline-check"><input type="checkbox" id="search-favorites">즐겨찾기만</label><span class="muted">회사 카드를 눌러 주요 사업과 재무분석을 확인하세요.</span></div>
           <div id="categories" class="chips" aria-label="소재 분류"></div>
           <div class="results-heading"><h2>관련 회사 <span id="result-count">0</span></h2><span id="search-scope" class="muted"></span><button id="pick-all" class="outline hidden" type="button">검색 결과 전체 담기</button></div>
-          <p class="scope-note">KRX 주요제품 목록, 상장사 최신 사업보고서의 사업 내용(매주 갱신), 저장된 공시에서 후보를 찾습니다. 회사를 선택한 뒤 해당 회사의 원문을 수집하고 분석합니다. 비상장사는 저장된 원문 또는 <button class="text-button" data-go="companies">회사명 찾기</button>를 이용하세요.</p>
+          <p class="scope-note">소재 검색은 KRX 주요제품·사업보고서·저장된 공시에서 후보를 찾습니다. 회사명·종목코드는 DART 공식 목록에서 비상장사를 포함해 찾습니다. 카드에서 주요 사업과 저장된 재무분석을 바로 확인하고, 자료가 없으면 분석을 요청할 수 있습니다.</p>
           <p id="catalog-status" class="scope-note" role="status"></p>
           <div class="list-controls"><label for="search-sort">정렬</label><select id="search-sort"><option value="relevance">관련도</option><option value="name">회사명</option><option value="evidence">공시 근거 수</option></select><div id="search-pagination" class="pagination"></div></div>
           <div id="search-results" class="company-grid"></div>
@@ -50,6 +50,7 @@
           <p id="company-status" class="muted">처음 조회할 때 공식 회사 목록을 내려받습니다.</p><div id="company-results" class="company-grid"></div>
         </section>
         <section id="page-financial" class="page hidden">
+          <section id="company-business" class="panel hidden" aria-label="회사의 주된 사업내용"></section>
           <div class="page-heading"><div><p class="eyebrow">FINANCIAL WORKSPACE</p><h1 id="financial-title">5개년 재무 분석.</h1><p class="muted">재무상태·손익, 공시된 제품 매출과 내수·수출을 한곳에서 봅니다.</p></div></div>
           <form id="financial-form" class="panel form-row">
             <div class="grow"><label for="selected-company">선택한 회사</label><input id="selected-company" placeholder="회사 찾기에서 회사를 선택하세요" readonly></div>
