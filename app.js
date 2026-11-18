@@ -35,6 +35,7 @@ function page(name) {
   if(!labels[name])return;
   document.querySelectorAll('.page').forEach(n=>n.classList.toggle('hidden',n.id!==`page-${name}`));
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
+  notify();// A message about the previous page does not belong on the next one.
   $('page-label').textContent=labels[name];
   if(name==='library')loadLibrary().catch(e=>notify(e.message));
   renderPicks();
@@ -105,7 +106,11 @@ function renderResults(data) {
   for(const company of data.companies) {
     const card=companyCard(company.name,company.code,company.stock||'');
     card.classList.add('company-link-card');
-    card.addEventListener('click',e=>{if(!e.target.closest('button,a,input,label,select,textarea')&&!window.getSelection()?.toString())analyzeCompany(company).catch(error=>notify(error.message));});
+    card.addEventListener('click',e=>{
+      // On phones the excerpt is cut to three lines; the first tap on it shows the rest.
+      const text=e.target.closest('.excerpt');
+      if(text&&!text.classList.contains('open')&&text.scrollHeight>text.clientHeight+2){text.classList.add('open');return;}
+      if(!e.target.closest('button,a,input,label,select,textarea')&&!window.getSelection()?.toString())analyzeCompany(company).catch(error=>notify(error.message));});
     if(batchEnabled())card.append(pickCheckbox(company));
     const tags=el('div','tag-row'); company.categories.forEach(c=>tags.append(el('span','tag',c))); card.append(tags);
     if(company.research?.status && company.research.status!=='unreviewed')tags.append(el('span','tag','사용자 검토: '+({confirmed:'제조판매 확인',mention:'언급만 확인',exclude:'제외로 표시'})[company.research.status]));
@@ -563,6 +568,8 @@ function pagination(id,current,total,choose) {
   const root=$(id),prev=button('← 이전',()=>choose(current-1)),next=button('다음 →',()=>choose(current+1));
   prev.disabled=current<=1;next.disabled=current>=total;
   root.replaceChildren(prev,el('span','muted',`${current} / ${total}`),next);
+  // A single page needs no paging buttons.
+  root.classList.toggle('hidden',(total||1)<=1);
 }
 async function loadLibrary(requestedPage=1) {
   const revision=++state.libraryRevision;
@@ -764,6 +771,7 @@ $('financial-form').addEventListener('submit',e=>{e.preventDefault();if(!state.c
 for(const id of ['basis','last-year'])$(id).addEventListener('change',()=>{state.financialRevision++;state.report=null;state.reportId=null;$('financial-content').className='panel empty';$('financial-content').replaceChildren(el('h2','','조회 조건이 변경되었습니다.'),el('p','','실제 재무 조회를 눌러 새 조건의 표를 불러오세요.'));});
 $('pick-all').addEventListener('click',()=>pickAllResults().catch(e=>notify(e.message)));
 for(const id of ['batch-clear','pick-tray-clear','selection-clear'])$(id).addEventListener('click',()=>{state.picks.clear();renderPicks();});
+$('notice').addEventListener('click',()=>notify());
 for(const id of ['pick-tray-open','selection-analyze'])$(id).addEventListener('click',()=>openSelectedBatch().catch(e=>notify(e.message)));
 $('batch-form').addEventListener('submit',e=>{e.preventDefault();runBatch().catch(error=>notify(error.message));});
 $('refresh-jobs').addEventListener('click',()=>refreshJobs().catch(e=>notify(e.message)));
