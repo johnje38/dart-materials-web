@@ -483,12 +483,14 @@ function showCalculation(col,metric) {
     body.append(el('p','scope-note',formula.netDebt+' · 순차입금비율 = '+formula.netDebtRatio));
     if(!detail)body.append(el('p','quality-warning','이전 분석에는 차입금 자료가 없습니다. 다시 분석해 주세요.'));
     else if(detail.reason)body.append(el('p','quality-warning',detail.reason));
+    for(const n of detail?.notes||[])body.append(el('p','scope-note',n));
     if(netMetric&&col.values.cash==null)body.append(el('p','quality-warning','현금및현금성자산 미입수로 계산할 수 없습니다.'));
     if(netMetric&&col.values.shortTermInvestments==null)body.append(el('p','quality-warning','단기금융상품 미입수로 계산할 수 없습니다. 계정이 없다는 이유로 0을 넣지 않습니다.'));
     if(metric==='netDebtRatio'&&(col.values.equity==null||col.values.equity===0))body.append(el('p','quality-warning','자본총계 미입수 또는 0으로 비율을 계산할 수 없습니다.'));
     if(netMetric&&col.values.netDebt<0)body.append(el('p','','순현금 상태: 현금및현금성자산과 단기금융상품이 총차입금보다 많습니다.'));
+    if(detail?.components?.length)body.append(el('h3','',`더한 항목 ${detail.components.length}개`));
     for(const component of detail?.components||[]){
-      renderMetricSource(body,col,component.account_nm,component);
+      renderMetricSource(body,col,component.account_nm+(component.section?` (${component.section})`:''),component);
     }
     if(netMetric){
       for(const key of ['cash','shortTermInvestments',...(metric==='netDebtRatio'?['equity']:[])])if(col.sources?.[key])renderMetricSource(body,col,key,col.sources[key]);
