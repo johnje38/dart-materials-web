@@ -23,3 +23,5 @@ input,select,textarea,.search-box input{font-size:16px}
 .card-footer{padding-top:9px}.card-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-left:0}.card-actions>.primary{grid-column:1/-1}.card-actions button{padding:5px 4px;min-height:36px;font-size:12px}
 .table-container{max-height:70vh}th,td{padding:8px 9px;font-size:12px}th:first-child{min-width:0;width:92px;max-width:104px;white-space:normal;word-break:keep-all}
 }
+
+.shareholder-line{margin:10px 0;line-height:1.6}.shareholder-line .text-button{padding:0 4px}

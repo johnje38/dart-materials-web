@@ -233,6 +233,7 @@ async function loadCompanyBusiness(company,revision){
     root.replaceChildren(el('h2','',company.name+' · 주된 사업내용'));
     if(data.listing){root.append(el('p','scope-note',`업종: ${data.listing.industry||'미확인'} · 종목코드 ${data.listing.stock||company.stock||'없음'}`),el('p','',data.listing.products||'주요제품 정보 없음'),el('p','scope-note','출처: KRX 주요제품 목록'));
     }
+    if(data.shareholders)renderShareholderLine(root,data.shareholders);
     const blocks=(data.report?.blocks||[]).filter(b=>b.core).slice(0,3);
     if(blocks.length){root.append(el('h3','section-heading','사업보고서의 사업·제품 설명'));
       for(const b of blocks){const d=el('details','evidence');d.append(el('summary','',b.section||'주요 사업·제품'),el('pre','raw-values',b.text));root.append(d);}
@@ -241,6 +242,31 @@ async function loadCompanyBusiness(company,revision){
     }else root.append(el('p','scope-note','저장된 사업보고서의 주요 사업 설명이 없습니다. 미입수는 사업이 없다는 뜻이 아닙니다.'));
     if(data.warning)root.append(el('p','quality-warning',data.warning));
   }catch(error){if(revision===state.financialRevision)root.append(el('p','quality-warning','사업내용 추가 조회 실패: '+error.message));}
+}
+const pct=v=>v==null?'미기재':`${Number(v).toFixed(2)}%`;
+function renderShareholderLine(root,h){
+  const basis=`${h.report_name||'최근 정기보고서'}${h.settled?` · ${h.settled} 기준`:''}`;
+  const line=el('p','shareholder-line');
+  if(!h.largest_name){line.append(el('b','','최대주주 '),document.createTextNode(`정보 없음 (${basis})`));root.append(line);return;}
+  line.append(el('b','','최대주주 '),document.createTextNode(`${h.largest_name} ${pct(h.largest_rate)} · 특수관계인 포함 ${pct(h.group_rate)} `));
+  line.append(el('span','scope-note',`(${basis})`),document.createTextNode(' '));
+  line.append(button('근거 보기',()=>showShareholders(h),'text-button'));
+  root.append(line);
+}
+function showShareholders(h){
+  const body=dialog(`${h.name} · 최대주주 현황`);
+  body.append(el('p','',`최대주주: ${h.largest_name||'미기재'} (${h.largest_relation||'관계 미기재'}) · 보통주 ${pct(h.largest_rate)}`));
+  body.append(el('p','',`특수관계인 포함 보통주 합계: ${pct(h.group_rate)}`));
+  body.append(el('p','scope-note',h.group_source==='dart'?`합계는 DART 표의 "계" 행 값입니다. 각 행을 직접 더하면 ${pct(h.summed_rate)}입니다 (행마다 반올림해서 0.01%p 정도 차이 날 수 있습니다).`
+    :h.group_source==='sum'?'DART 표의 "계" 행이 비어 있어 아래 보통주 지분율을 직접 더한 값입니다.':'합계를 계산할 수 없습니다.'));
+  body.append(el('p','scope-note',`출처: ${h.report_name||'정기보고서'} · 결산기준일 ${h.settled||'미기재'} · 접수번호 ${h.receipt} · Open DART 최대주주 현황(hyslrSttus)`));
+  sourceLinks(body,{rcept_no:h.receipt});
+  const table=el('table','data-table'),head=el('tr');
+  for(const t of ['성명','관계','주식 종류','기말 주식수','기말 지분율','비고'])head.append(el('th','',t));
+  table.append(head);
+  for(const r of h.rows||[]){const tr=el('tr');for(const v of [r.nm,r.relate,r.stock_knd,r.trmend_posesn_stock_co,r.trmend_posesn_stock_qota_rt,r.rm])tr.append(el('td','',v==null||v===''?'-':String(v).trim()));table.append(tr);}
+  const box=el('div','table-container');box.append(table);body.append(box);
+  body.append(el('p','scope-note','지분율은 보고서 결산기준일 현재입니다. 그 뒤의 지분 변동(대량보유·임원 소유 보고)은 반영되지 않습니다.'));
 }
 async function toggleFavorite(company){
   const previous=await api('/api/research/'+company.code);

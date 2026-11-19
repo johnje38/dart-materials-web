@@ -5597,7 +5597,7 @@
         t1 = B.Map_fjgQr.get$keys(B.Map_fjgQr),
         metrics = A.List_List$_of(t1, A._instanceType(t1)._eval$1("Iterable.E"));
       t1 = type$.String;
-      t2 = A.List_List$_of(B.Map_MqoFB.get$keys(B.Map_MqoFB), t1);
+      t2 = A.List_List$_of(B.Map_MqlVe.get$keys(B.Map_MqlVe), t1);
       t2.push(_s19_);
       t2.push(_s12_);
       t2.push(_s12_0);
@@ -26104,11 +26104,12 @@
     B.List_6ww = makeConstList(["\uc790\uc0b0\ucd1d\uacc4"], type$.JSArray_String);
     B.Record3_j0d = new A._Record_3("BS", B.List_n7L, B.List_6ww);
     B.List_6k8 = makeConstList(["ifrs-full_CashAndCashEquivalents"], type$.JSArray_String);
-    B.List_yjP = makeConstList(["\ud604\uae08\ubc0f\ud604\uae08\uc131\uc790\uc0b0"], type$.JSArray_String);
-    B.Record3_YI3 = new A._Record_3("BS", B.List_6k8, B.List_yjP);
+    B.List_ou5 = makeConstList(["\ud604\uae08\ubc0f\ud604\uae08\uc131\uc790\uc0b0", "\ud604\uae08\uc131\uc790\uc0b0"], type$.JSArray_String);
+    B.Record3_1np = new A._Record_3("BS", B.List_6k8, B.List_ou5);
+    B.List_NnI = makeConstList(["ifrs-full_ShorttermDepositsNotClassifiedAsCashEquivalents"], type$.JSArray_String);
+    B.List_Okb = makeConstList(["\ub2e8\uae30\uae08\uc735\uc0c1\ud488", "\ub2e8\uae30\uae08\uc735\uc790\uc0b0", "\uc720\ub3d9\uae08\uc735\uc0c1\ud488"], type$.JSArray_String);
+    B.Record3_AFz = new A._Record_3("BS", B.List_NnI, B.List_Okb);
     B.List_empty4 = makeConstList([], type$.JSArray_String);
-    B.List_CJA = makeConstList(["\ub2e8\uae30\uae08\uc735\uc0c1\ud488"], type$.JSArray_String);
-    B.Record3_LZK = new A._Record_3("BS", B.List_empty4, B.List_CJA);
     B.List_8Qq = makeConstList(["\ub2e8\uae30\ucc28\uc785\uae08", "\ub2e8\uae30\ucc28\uc785\ubd80\ucc44"], type$.JSArray_String);
     B.Record3_nLF = new A._Record_3("BS", B.List_empty4, B.List_8Qq);
     B.List_9tP = makeConstList(["\uc720\ub3d9\uc131\uc7a5\uae30\ucc28\uc785\uae08", "\uc720\ub3d9\uc131\uc7a5\uae30\ucc28\uc785\ubd80\ucc44", "\uc720\ub3d9\uc131\uc7a5\uae30\ubd80\ucc44(\ucc28\uc785\uae08)"], type$.JSArray_String);
@@ -26127,7 +26128,7 @@
     B.List_mRD = makeConstList(["ifrs-full_ProfitLossBeforeTax"], type$.JSArray_String);
     B.List_Pkv = makeConstList(["\ubc95\uc778\uc138\ucc28\uac10\uc804\uc21c\uc774\uc775", "\ubc95\uc778\uc138\ube44\uc6a9\ucc28\uac10\uc804\uc21c\uc774\uc775"], type$.JSArray_String);
     B.Record3_qzt = new A._Record_3("income", B.List_mRD, B.List_Pkv);
-    B.Map_MqoFB = new A.ConstantStringMap(B.Object_B8H, [B.Record3_75r, B.Record3_QMb, B.Record3_w4D, B.Record3_AOd, B.Record3_CSU, B.Record3_pMb, B.Record3_j0d, B.Record3_YI3, B.Record3_LZK, B.Record3_nLF, B.Record3_LMl, B.Record3_Jj2, B.Record3_Cv0, B.Record3_eWu, B.Record3_pBD, B.Record3_qzt], A.findType("ConstantStringMap<String,+(String,List<String>,List<String>)>"));
+    B.Map_MqlVe = new A.ConstantStringMap(B.Object_B8H, [B.Record3_75r, B.Record3_QMb, B.Record3_w4D, B.Record3_AOd, B.Record3_CSU, B.Record3_pMb, B.Record3_j0d, B.Record3_1np, B.Record3_AFz, B.Record3_nLF, B.Record3_LMl, B.Record3_Jj2, B.Record3_Cv0, B.Record3_eWu, B.Record3_pBD, B.Record3_qzt], A.findType("ConstantStringMap<String,+(String,List<String>,List<String>)>"));
     B.Object_empty = {};
     B.Map_empty = new A.ConstantStringMap(B.Object_empty, [], A.findType("ConstantStringMap<Symbol0,@>"));
     B.Object_r98 = {revenue: 0, cost: 1, gross: 2, sga: 3, operating: 4, margin: 5, depreciation: 6, amortization: 7, ebitda: 8, netIncome: 9, assets: 10, cash: 11, shortTermBorrowings: 12, currentLongTermBorrowings: 13, longTermBorrowings: 14, shortTermInvestments: 15, interestBearingDebt: 16, netDebt: 17, netDebtRatio: 18, liabilities: 19, equity: 20, liabilityRatio: 21, liabilitiesLessCash: 22, liabilitiesLessCashRatio: 23, operatingCash: 24, growth: 25};
