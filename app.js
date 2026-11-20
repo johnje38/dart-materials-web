@@ -316,7 +316,16 @@ function showEvidence(company) {
 async function showCompanyRaw(code,name) {
   const body=dialog(name+' · 수집한 재무표 원문');body.append(el('p','muted','조회 중…'));
   const data=await api('/api/company?'+new URLSearchParams({code}));body.replaceChildren();
-  if(!data.reports.length) {body.append(el('p','',"수집한 원문이 없습니다. ‘원문 수집’에서 선택한 회사의 보고서를 수집하세요."));return;}
+  if(!data.reports.length) {
+    // Results-only analyses (listed companies outside the material search) keep no
+    // filing text; each figure's receipt still opens the original on DART.
+    const cols=state.report?.corp_code===code?state.report.columns||[]:[];
+    const seen=new Map();for(const col of cols)for(const s of Object.values(col.sources||{}))if(/^\d{14}$/.test(s?.receipt||'')&&!seen.has(s.receipt))seen.set(s.receipt,col.label||String(col.year));
+    if(!seen.size){body.append(el('p','',"수집한 원문이 없습니다. ‘원문 수집’에서 선택한 회사의 보고서를 수집하세요."));return;}
+    body.append(el('p','scope-note','이 회사는 분석 결과만 저장하고 공시 원문은 보관하지 않습니다. 아래 링크로 DART에서 원문을 확인하세요.'));
+    for(const [receipt,label] of seen){const p=el('p','',`${label} · 접수번호 ${receipt} `);const a=el('a','text-button','DART 원문 ↗');a.href=`https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${receipt}`;a.target='_blank';a.rel='noopener noreferrer';p.append(a);body.append(p);}
+    return;
+  }
   for(const r of data.reports) {
     const details=el('details','evidence');details.append(el('summary','',`${r.filing.report_nm} · ${r.filing.rcept_dt} · 재무 블록 ${r.totalBlocks}개`));
     sourceLinks(details,r.filing);
