@@ -223,6 +223,13 @@ function selectCompany(company) {
   $('financial-content').className='panel empty';page('financial');
   loadCompanyBusiness(company,state.financialRevision);
 }
+// Reports are stored paragraph by paragraph; show each section once with its paragraphs joined.
+function businessSections(blocks){
+  const sections=new Map();
+  for(const b of blocks||[]){if(!b.core)continue;const name=b.section||'주요 사업·제품';
+    if(sections.has(name))sections.get(name).push(b.text);else sections.set(name,[b.text]);}
+  return [...sections].map(([section,texts])=>({section,text:texts.join('\n\n')}));
+}
 async function loadCompanyBusiness(company,revision){
   const root=$('company-business');if(!root)return;
   root.classList.remove('hidden');root.replaceChildren(el('h2','',company.name+' · 주된 사업내용'));
@@ -234,9 +241,9 @@ async function loadCompanyBusiness(company,revision){
     if(data.listing){root.append(el('p','scope-note',`업종: ${data.listing.industry||'미확인'} · 종목코드 ${data.listing.stock||company.stock||'없음'}`),el('p','',data.listing.products||'주요제품 정보 없음'),el('p','scope-note','출처: KRX 주요제품 목록'));
     }
     if(data.shareholders)renderShareholderLine(root,data.shareholders);
-    const blocks=(data.report?.blocks||[]).filter(b=>b.core).slice(0,3);
+    const blocks=businessSections(data.report?.blocks).slice(0,3);
     if(blocks.length){root.append(el('h3','section-heading','사업보고서의 사업·제품 설명'));
-      for(const b of blocks){const d=el('details','evidence');d.append(el('summary','',b.section||'주요 사업·제품'),el('pre','raw-values',b.text));root.append(d);}
+      for(const b of blocks){const d=el('details','evidence');d.append(el('summary','',b.section),el('pre','raw-values',b.text));root.append(d);}
       root.append(el('p','scope-note',data.report.report_name||'사업보고서'));
       if(/^\d{14}$/.test(data.report.receipt)){const a=el('a','text-button','DART 사업보고서 원문 ↗');a.href=`https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${data.report.receipt}`;a.target='_blank';a.rel='noopener noreferrer';root.append(a);}
     }else root.append(el('p','scope-note','저장된 사업보고서의 주요 사업 설명이 없습니다. 미입수는 사업이 없다는 뜻이 아닙니다.'));
